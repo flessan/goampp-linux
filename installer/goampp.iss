@@ -33,7 +33,7 @@ DisableProgramGroupPage=yes
 PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-SetupIconFile=logo.ico
+SetupIconFile=assets\logo.ico
 UninstallDisplayIcon={app}\goampp.exe
 WizardStyle=modern
 Compression=lzma2/max
@@ -54,13 +54,17 @@ Name: "{app}\conf"; Permissions: users-modify
 Name: "{app}\www"; Permissions: users-modify
 
 [Files]
+; The icon, logos and manifest are compiled into goampp.exe.
 Source: "goampp.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "goampp.exe.manifest"; DestDir: "{app}"; Flags: ignoreversion
-Source: "logo.ico"; DestDir: "{app}"; Flags: ignoreversion
-Source: "logo.png"; DestDir: "{app}"; Flags: ignoreversion
-Source: "assets\*"; DestDir: "{app}\assets"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; VC++ runtime seeded into PostgreSQL's bin\ by its post-install hook.
 Source: "runtime\*.dll"; DestDir: "{app}\runtime"; Flags: ignoreversion
+
+[InstallDelete]
+; Leftovers from releases that shipped these next to the exe.
+Type: files; Name: "{app}\goampp.exe.manifest"
+Type: files; Name: "{app}\logo.ico"
+Type: files; Name: "{app}\logo.png"
+Type: filesandordirs; Name: "{app}\assets"
 
 [Icons]
 Name: "{group}\GoAMPP"; Filename: "{app}\goampp.exe"

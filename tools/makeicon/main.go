@@ -5,7 +5,7 @@
 //
 // Usage:
 //
-//	go run ./tools/makeicon logo.png logo.ico
+//	go run ./tools/makeicon assets/logo.png assets/logo.ico
 //
 // This is a one-shot build tool — not compiled into the main binary.
 package main
