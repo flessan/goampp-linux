@@ -21,7 +21,7 @@ func init() {
 		StripTop:   "ghc-9.14.1/",
 		Kind:       packages.Zip,
 		CheckFile:  "bin/ghc.exe",
-		Notes:      "GHC 9.14.1 — Glasgow Haskell Compiler. Large download (~570 MB).",
+		Notes:      "GHC — Glasgow Haskell Compiler. Large download (~570 MB).",
 	}, resolveGHCLatest)
 }
 

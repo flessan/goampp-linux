@@ -20,7 +20,7 @@ func init() {
 		StripTop:   "",
 		Kind:       packages.Zip,
 		CheckFile:  "bin/elixir.bat",
-		Notes:      "Elixir 1.18.3 — requires Erlang OTP 27 (install Erlang card first).",
+		Notes:      "Elixir — requires Erlang OTP 27 (install Erlang first).",
 	}, packages.MapResolverVersion(
 		packages.ResolveGitHubLatestAsset(
 			"elixir-lang", "elixir",

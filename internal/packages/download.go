@@ -35,7 +35,9 @@ func DownloadAndInstallVersion(name, version, baseDir string, log func(string), 
 	}
 
 	notes := spec.Notes
-	versionLabel := spec.Version
+	// The version actually installed is only known once a candidate is
+	// resolved (logged as "source: ..."); name a branch only when one was picked.
+	versionLabel := ""
 	if len(spec.Variants) > 0 && version != "" {
 		for _, v := range spec.Variants {
 			if v.Version == version && v.Notes != "" {
@@ -56,7 +58,7 @@ func DownloadAndInstallVersion(name, version, baseDir string, log func(string), 
 
 	if spec.CheckFile != "" {
 		if _, err := os.Stat(filepath.Join(installDir, filepath.FromSlash(spec.CheckFile))); err == nil {
-			log(fmt.Sprintf("[%s] %s already installed at %s", name, versionLabel, installDir))
+			log(fmt.Sprintf("[%s] already installed at %s", name, installDir))
 
 			if installDir != canonicalDir {
 				if err := pointJunction(canonicalDir, installDir, log); err != nil {
@@ -78,7 +80,11 @@ func DownloadAndInstallVersion(name, version, baseDir string, log func(string), 
 	}
 	progress("starting", name, 0, 0)
 
-	log(fmt.Sprintf("[%s] %s — starting install", name, versionLabel))
+	if versionLabel != "" {
+		log(fmt.Sprintf("[%s] %s — starting install", name, versionLabel))
+	} else {
+		log(fmt.Sprintf("[%s] starting install", name))
+	}
 	if notes != "" {
 		log("  note: " + notes)
 	}
@@ -153,6 +159,16 @@ func DownloadAndInstallVersion(name, version, baseDir string, log func(string), 
 		if err := spec.PostInstall(canonicalDir, log); err != nil {
 			progress("idle", name, 0, 0)
 			return fmt.Errorf("post-install: %w", err)
+		}
+	}
+
+	// Never report success for an install that left the check file missing:
+	// the service would show as not installed and the next click would
+	// silently download it again.
+	if spec.CheckFile != "" {
+		if _, err := os.Stat(filepath.Join(canonicalDir, filepath.FromSlash(spec.CheckFile))); err != nil {
+			progress("idle", name, 0, 0)
+			return fmt.Errorf("install finished but %s is missing in %s — the package layout may have changed", spec.CheckFile, canonicalDir)
 		}
 	}
 
@@ -351,6 +367,8 @@ func ExtractZip(zipPath, destDir, stripTop string, onProgress func(done, total i
 		return err
 	}
 
+	stripTop = effectiveStripTop(r.File, stripTop)
+
 	total := int64(len(r.File))
 	var done int64
 	for _, f := range r.File {
@@ -409,6 +427,38 @@ func ExtractZip(zipPath, destDir, stripTop string, onProgress func(done, total i
 		rc.Close()
 	}
 	return nil
+}
+
+// effectiveStripTop checks the expected top-level folder against the archive.
+// Resolvers guess it from the file name, and upstream layouts change between
+// releases (Crystal 1.22 zips its files at the root), so when no entry starts
+// with the guess, the archive's own single top folder is stripped instead, or
+// nothing when the files sit at the root.
+func effectiveStripTop(files []*zip.File, stripTop string) string {
+	if stripTop == "" {
+		return ""
+	}
+	top := ""
+	single := true
+	for _, f := range files {
+		if strings.HasPrefix(f.Name, stripTop) {
+			return stripTop
+		}
+		i := strings.Index(f.Name, "/")
+		if i < 0 {
+			single = false
+			continue
+		}
+		if top == "" {
+			top = f.Name[:i+1]
+		} else if top != f.Name[:i+1] {
+			single = false
+		}
+	}
+	if single && top != "" {
+		return top
+	}
+	return ""
 }
 
 func CopyFile(src, dst string) error {

@@ -20,7 +20,7 @@ func init() {
 		InstallDir: "bin/ruby",
 		Kind:       packages.Exe,
 		CheckFile:  "bin/ruby.exe",
-		Notes:      "Ruby 3.4.4 via RubyInstaller2 — silent NSIS install.",
+		Notes:      "Ruby via RubyInstaller2 — silent install.",
 	}, packages.MapResolverVersion(
 		packages.ResolveGitHubLatestAsset(
 			"oneclick", "rubyinstaller2",

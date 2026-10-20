@@ -27,7 +27,7 @@ func init() {
 		Kind:       packages.Zip,
 
 		CheckFile: "data/PG_VERSION",
-		Notes:     "EDB 16.6 LTS — most stable Postgres on Windows; supported until 2028.",
+		Notes:     "PostgreSQL 16 (EDB binaries) — supported until 2028.",
 		PostInstall: func(installDir string, log func(string)) error {
 			dataDir := filepath.Join(installDir, "data")
 			if _, err := os.Stat(filepath.Join(dataDir, "PG_VERSION")); err == nil {
