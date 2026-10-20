@@ -1,6 +1,6 @@
 # GoAMPP
 
-A native Windows web-stack control panel written in Go. **One 7 MB binary** that downloads Apache, MariaDB, PHP, PostgreSQL, Redis, RabbitMQ, MinIO, Mailpit, Node.js, Python, Go, Java, and friends on demand — no installer bloat, no Docker, no WSL, no Electron.
+A native Windows web-stack control panel written in Go. **One self-contained `goampp.exe`** that downloads Apache, MariaDB, PHP, PostgreSQL, Redis, RabbitMQ, Mailpit, Node.js, Python, Go, Java, and friends on demand — no installer bloat, no Docker, no WSL, no Electron.
 
 [![release](https://img.shields.io/github/v/release/imtaqin/goampp)](https://github.com/imtaqin/goampp/releases/latest)
 [![license](https://img.shields.io/github/license/imtaqin/goampp)](LICENSE)
@@ -9,42 +9,41 @@ A native Windows web-stack control panel written in Go. **One 7 MB binary** that
 
 ## Features
 
-- **11 services** in the catalog — Apache, Nginx, MariaDB (as MySQL), PostgreSQL, Redis, PHP-FPM, phpMyAdmin, Adminer, pgweb, MinIO, Mailpit, RabbitMQ
-- **4 language runtimes** — Node.js LTS, Python (embeddable + auto-bootstrapped pip), Go, Eclipse Temurin JDK 21
-- **17 framework scaffolders** — Laravel, Laravel + Livewire, Symfony, CodeIgniter 4, WordPress, Next.js, Vite + React, Express, NestJS, AdonisJS, Flask, Django, FastAPI, Go net/http, Gin, Spring Boot, Static HTML
-- **Auto-vhost creation** — writes to Windows hosts file + Apache `vhosts.conf` + Nginx `sites/`
-- **Reverse-proxy vhosts** for Node/Python/Go/Java dev servers (Apache forwards `/` → `127.0.0.1:port`)
-- **System tray** with minimize-to-tray, close-to-tray, and auto-start on Windows boot
-- **Built-in text editor** for service config files (no `notepad.exe` shell-out)
-- **"Add tools to PATH"** — appends `bin/*` dirs to user PATH (HKCU registry, broadcasts `WM_SETTINGCHANGE`)
-- **Per-card action buttons** (Start / Stop / Restart / Conf), real-time log viewer, download progress bar
-- **Process zombie sweep** at startup — cleans stale `httpd.exe` / `mysqld.exe` from prior crashes
-- **Per-user install** — no admin needed for the installer; the app elevates on demand only when writing the hosts file
+- **29 packages** in the catalog — Apache, Nginx, MariaDB (as MySQL), PostgreSQL, Redis, PHP, phpMyAdmin, Adminer, pgweb, Mailpit, RabbitMQ, Composer, and language runtimes from Node.js and Python to Go, Java, Rust, Zig and Elixir
+- **Always the latest build** — every package resolves its newest release at install time from the official source (php.net, nodejs.org, MariaDB, Apache Lounge, GitHub releases, …), then falls back to the pinned URL and known archive mirrors when a link has gone 404
+- **Version switching** — pick PHP 7.4–8.5, Node 18/20/22 or Python 3.10–3.13 from a dropdown; GoAMPP downloads it and restarts the service and the web server that loads it
+- **Apache ⇄ Nginx in one click** — the old server stops and, if it was serving, the new one starts with regenerated vhosts
+- **17 framework scaffolders** — Laravel, Livewire, Symfony, CodeIgniter 4, WordPress, Next.js, Vite + React, Express, NestJS, AdonisJS, Flask, Django, FastAPI, Go net/http, Gin, Spring Boot, Static HTML
+- **Automatic virtual hosts** — saving a vhost or creating a project writes the hosts file, Apache `vhosts.conf` and Nginx `sites/`, then reloads the running web server
+- **Update checks** — installed packages are compared with the latest releases twice a day; update one or all from the Services page
+- **Fyne GUI** — compact list layout, light/dark theme that follows Windows, live activity log, per-package install progress
+- **System tray** with close-to-tray and launch-with-Windows
+- **Built-in config editor** (Ctrl+S to save), **"Add tools to PATH"**, **startup service selection**, **zombie process sweep** at launch
 
 ## Screenshots
 
-### Services dashboard
-16 service cards in a 4×4 grid, each with its own logo and Start/Stop/Restart/Conf buttons.
+### Services
+Every package grouped by kind, with status, version picker and one action button per row. Right-click a row for restart, config, terminal, folder, version and uninstall.
 
-![Services dashboard](assets/image/services.png)
+![Services page](assets/image/services.png)
 
 ### Projects — auto-scaffold + auto-vhost
-Pick a framework, type a name, click Create. Composer/npm/pip/go runs in the background, the vhost is registered, and the project is yours.
+Pick a framework, type a name, click Create. Composer/npm/pip/go runs in the background, the vhost is registered and the web server reloaded.
 
 ![Projects page](assets/image/projects.png)
 
 ### Virtual Hosts
-List of registered vhosts with an inline form. Domain split into name + extension dropdown so you can't accidentally hit HSTS-preloaded TLDs like `.dev`.
+Domains on the left, an editor on the right. The domain is split into name + extension so you can't accidentally hit HSTS-preloaded TLDs like `.dev`.
 
 ![Virtual Hosts page](assets/image/vhosts.png)
 
-### Built-in editor
-Multi-line text editor for `httpd.conf`, `php.ini`, `my.ini`, `redis.conf`, `config.inc.php`, the Windows hosts file, and `config.json`. No notepad shell-out, no external dependencies.
+### Config editor
+`httpd.conf`, `php.ini`, `my.ini`, `redis.conf`, `config.inc.php`, the Windows hosts file and `config.json` in a monospace editor.
 
 ![Editor page](assets/image/editor.png)
 
 ### Settings
-Path overview, runtime status (PHP / Composer / Node / Python / Java / Go), elevation status, and global actions including the "Restart as Administrator" relauncher.
+Theme, paths, PATH tools and about.
 
 ![Settings page](assets/image/settings.png)
 
@@ -53,66 +52,73 @@ Path overview, runtime status (PHP / Composer / Node / Python / Java / Go), elev
 Grab the latest installer from the [Releases page](https://github.com/imtaqin/goampp/releases/latest):
 
 ```
-goampp-setup-X.Y.Z.exe   ~5.4 MB
+goampp-setup-X.Y.Z.exe
 ```
 
-Installs to **`C:\goampp`** — the short path matches the XAMPP / Laragon convention and dodges MAX_PATH issues that bite deeply-nested project paths on Windows. The installer needs admin once (writing to the system drive root), but grants `users-modify` on every runtime subdirectory so goampp itself runs unelevated after install. Only the one-time install plus future hosts-file edits (for virtual hosts) hit UAC.
+Installs to **`C:\goampp`** — the short path matches the XAMPP / Laragon convention and dodges MAX_PATH issues that bite deeply-nested project paths on Windows. The installer needs admin once (writing to the system drive root), but grants `users-modify` on the install folder so goampp itself runs unelevated after install. Only the one-time install plus future hosts-file edits (for virtual hosts) hit UAC.
 
-The installer creates empty `bin/`, `downloads/`, `tmp/`, `logs/`, `conf/`, and `www/` directories — everything else gets fetched on first start.
+A portable `goampp-vX.Y.Z-windows-amd64.zip` is published next to the installer.
 
 ## First run
 
-1. **Click any service card's Start button** — GoAMPP downloads + extracts that service's binaries on the fly. First run installs ~12 MB for Apache, ~80 MB for MariaDB, etc.
-2. **Click "Start Stack"** below the grid to boot the essential web stack (Apache + MariaDB + phpMyAdmin) in one go.
+1. **Click Install on any row** — GoAMPP downloads and extracts that package on the fly.
+2. **Click "Start stack"** in the sidebar to install and boot the essential web stack (Apache or Nginx + PHP + MariaDB + phpMyAdmin) in one go.
 3. **Open <http://localhost/phpmyadmin/>** — login as `root` with no password.
-4. **Switch to the Projects tab** to scaffold a Laravel/Symfony/Express/Flask/Django/etc. project with auto-vhost.
+4. **Go to Projects** to scaffold a Laravel/Symfony/Express/Flask/Django/etc. project with its own `.test` domain.
 
 ## Build from source
 
-Requires **Go 1.21+ (64-bit)**.
-
-```bash
-git clone https://github.com/imtaqin/goampp
-cd goampp
-go build -ldflags="-H windowsgui -s -w" -trimpath -o goampp.exe .
-```
-
-Or use the helper batch file (sets `GOARCH=amd64` for 32-bit Go installs):
+Requires **Go 1.27+ (64-bit)** and a **MinGW-w64 `gcc`** on `PATH` — the Fyne GUI uses cgo. MSYS2's `mingw64` or `winget install BrechtSanders.WinLibs.POSIX.UCRT` both work.
 
 ```cmd
-build.bat
+git clone https://github.com/imtaqin/goampp
+cd goampp
+build.bat 1.2.3
 ```
 
-Output is a single 7 MB `goampp.exe`. Run it next to `goampp.exe.manifest`, `logo.ico`, and `assets/icons/*.ico` (all in the repo).
+`build.bat` embeds the icon, manifest and version info with [go-winres](https://github.com/tc-hib/go-winres) and builds a single `goampp.exe`. Logos and icons are compiled in, so the only thing that sits next to it is `runtime/` (the VC++ DLLs PostgreSQL needs). `build-installer.bat 1.2.3` also builds the Inno Setup installer into `dist/`.
+
+Run the tests with `go test ./...`. `GOAMPP_SNAPSHOT=<dir> go test ./internal/gui -run Snapshots` renders every page to PNG without a desktop session.
 
 ## Project layout
 
 ```
 goampp/
-├── main.go                 # entry point + WM_CREATE wiring
-├── service.go              # process lifecycle (start/stop/log capture)
-├── download.go             # service catalog + downloader/extractor
-├── frameworks.go           # framework scaffolders (Laravel, Next.js, ...)
-├── vhost.go                # hosts file + Apache/Nginx vhost writers
-├── tray.go                 # system tray icon + popup menu
-├── ui_tabs.go              # 5 pages (Services/Projects/Editor/Vhosts/Settings)
-├── icons.go                # service logo loading via STM_SETICON
-├── paint.go                # owner-drawn coloured buttons
-├── pathenv.go              # "Add to PATH" + "Restart as Admin"
-├── zombies.go              # PowerShell-based stale-process sweep
-├── config.go               # config.json load/save
-├── assets/icons/*.ico      # 17 service & framework logos (32×32)
-├── icon/*.png              # source PNGs (run tools/makelogos to refresh)
-├── tools/makeicon/         # one-shot PNG → ICO converter
-└── tools/makelogos/        # bulk logo generator (icon/*.png → assets/icons/*.ico)
+├── main.go                    # entry point: wires core + GUI
+├── assets/                    # logo, service icons and logos (compiled in)
+├── installer/goampp.iss       # Inno Setup script
+├── runtime/                   # VC++ runtime DLLs shipped next to the exe
+├── tools/                     # one-off icon/logo generators
+└── internal/
+    ├── core/                  # app state and every user action: start/stop,
+    │                          #   install, version switch, vhosts, updates
+    ├── gui/                   # Fyne front end (theme, pages, widgets, tray)
+    ├── packages/              # download engine: catalogue, resolvers,
+    │                          #   URL fallbacks, cache, installed metadata
+    ├── services/              # one folder per package: download recipe,
+    │   ├── apache/            #   latest-version resolver, post-install steps
+    │   ├── php/
+    │   ├── mysql/
+    │   └── …
+    ├── config/                # config.json
+    ├── process/               # service process supervisor + zombie sweep
+    ├── vhost/                 # hosts file + Apache/Nginx vhost writers
+    ├── projects/              # framework scaffolders
+    ├── pathenv/               # user PATH management
+    └── env/                   # install folder + log sink shared by all layers
 ```
+
+Adding a package means adding one folder under `internal/services/` that calls `packages.Register` from `init`, and importing it in `internal/services/services.go`.
 
 What's in `bin/`, `downloads/`, `logs/`, `tmp/`, `conf/`, and `www/` is gitignored — those directories are populated at runtime.
 
 ## How it works (technical highlights)
 
-### Services are downloaded, not bundled
-The catalog in `download.go` keys each service by name to a `DownloadSpec` with the URL, install dir, top-level strip prefix, post-install hook, and check file. Click Start → spawn a goroutine → HTTP fetch → atomic rename → extract → run hook → start the process. Cached in `downloads/` so reinstalls skip the network.
+### Packages are downloaded, not bundled
+Each package registers a `DownloadSpec` (pinned URL, install dir, strip prefix, post-install hook, check file) plus a resolver that finds the newest release. An install tries the resolved URL, then the pinned one, then known archive locations (e.g. `windows.php.net/downloads/releases/archives/`), skipping anything that answers 404, 410, 403 or an HTML page instead of the file. Downloads are cached in `downloads/` so reinstalls skip the network.
+
+### GitHub without rate limits
+GitHub's API allows 60 anonymous calls an hour, which one update check can use up. Release lookups fall back to the github.com release pages and feeds, and use `GITHUB_TOKEN` / `GH_TOKEN` when set.
 
 ### PHP runs via classic CGI, not FastCGI
 Apache's `mod_proxy_fcgi` has a 12-year-old Windows bug ([Apache #55345](https://bz.apache.org/bugzilla/show_bug.cgi?id=55345)) where it concatenates the upstream URL with the script's drive-letter path, producing `fcgi://127.0.0.1:9000C:/...` and failing DNS. GoAMPP sidesteps it entirely by using `mod_cgi` + `mod_actions` + `ScriptAlias` to invoke `php-cgi.exe` directly. Slower per request than FastCGI, infinitely more reliable on Windows.
@@ -123,14 +129,8 @@ Apache's winnt MPM forks worker children that survive when you kill the parent. 
 ### Startup zombie sweep via PowerShell
 On launch, GoAMPP enumerates every process via PowerShell (`Get-Process | Where-Object { $_.Path }`), filters to anything whose image lives inside `<goampp>/bin/`, and `taskkill /F /T`'s each one. Cleans up stale workers from prior crashes so the next Start doesn't hit "port already in use". Originally used `wmic` but Microsoft removed that from Win11 22H2+.
 
-### Card grid with per-card buttons
-The Services view is a hand-built 4×3 grid of widget bundles, not a ListView. Each card holds an `SS_ICON` Static for the logo, three Statics for name/status/version, and four owner-drawn coloured Buttons for Start/Stop/Restart/Conf. Per-card buttons cut the click count in half compared to the "select row → click action" XAMPP pattern.
-
-### Coloured buttons via owner-draw
-windigo's default Buttons render with the system theme (gray/white). GoAMPP overrides them with `BS_OWNERDRAW` style + a `WM_DRAWITEM` handler that paints the background with a cached `HBRUSH` (created via direct `gdi32!CreateSolidBrush` syscall — windigo doesn't expose it). Each button registers its colour scheme in a per-ctrl-ID map; the draw handler looks it up and fills accordingly. Green Start, red Stop, orange Restart, blue Conf, slate neutral.
-
-### Tray menu via raw `AppendMenuW`
-The tray right-click menu is built with `CreatePopupMenu` + raw `user32!AppendMenuW` syscalls (windigo only exposes the verbose `InsertMenuItem` API that takes a `MENUITEMINFO`). Menu commands route through `wnd.On().WmCommand(id, CMD_MENU, fn)` rather than the generic `Wm(WM_COMMAND, ...)` handler — windigo's `processLast()` special-cases WM_COMMAND and only walks the `cmds` list, so generic interceptors are silently dropped.
+### Core and GUI are separate
+`internal/core` never imports the GUI. The front end registers `core.UI` hooks (run on the UI thread, status, refresh, progress) at start-up, so background work — downloads, update checks, service state changes — reports back without knowing about Fyne.
 
 ## Troubleshooting
 
@@ -152,7 +152,7 @@ The data directory wasn't seeded. The post-install hook normally runs `mariadb-i
 
 | | GoAMPP | XAMPP | Laragon | Docker Desktop |
 |---|---|---|---|---|
-| Installer size | **5.4 MB** | ~200 MB | ~100 MB | ~600 MB |
+| Installer size | **~14 MB** | ~200 MB | ~100 MB | ~600 MB |
 | Admin required to install | ❌ | ✅ | ❌ | ✅ |
 | Native Win32 (no runtime) | ✅ | ✅ | ✅ | ❌ (HyperV/WSL) |
 | Auto-installs services on demand | ✅ | ❌ | ❌ | N/A |

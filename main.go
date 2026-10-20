@@ -1,321 +1,61 @@
 //go:build windows
 
+// GoAMPP is a native Windows control panel for a local web stack.
 package main
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
-	"strings"
-	"sync"
 	"syscall"
-	"time"
 
-	"github.com/rodrigocfd/windigo/co"
-	"github.com/rodrigocfd/windigo/ui"
-	"github.com/rodrigocfd/windigo/win"
-	"golang.org/x/sys/windows/registry"
+	"golang.org/x/sys/windows"
+
+	"goampp/internal/core"
+	"goampp/internal/gui"
+	_ "goampp/internal/services"
+	"goampp/internal/vhost"
 )
 
-type App struct {
-	baseDir  string
-	cfg      *Config
-	services []*ManagedService
-
-	wnd       *ui.Main
-	statusBar *ui.StatusBar
-
-	logBox *ui.Edit
-
-	logMu  sync.Mutex
-	logBuf strings.Builder
-}
-
-type ManagedService struct {
-	Conf    *ServiceConf
-	Service *Service
-}
-
-var app *App
-
-const maxLogBytes = 200 * 1024
-
-// appVersion is the release this build came from. The release workflow stamps
-// it from the tag (-ldflags "-X main.appVersion=v0.6.4"), so the About box and
-// the status bar cannot drift from the release they were built from — which is
-// what the two hand-written copies of this string used to do. "dev" is the
-// honest label for a local build.
-var appVersion = "dev"
-
 func main() {
-	if handleElevatedHostsHelper() {
+	if vhost.HandleElevatedHostsHelper() {
 		return
 	}
-
-	if len(os.Args) >= 3 && os.Args[1] == "--hide-run" {
-		cmd := exec.Command(os.Args[2], os.Args[3:]...)
-		cmd.SysProcAttr = &syscall.SysProcAttr{
-			HideWindow:    true,
-			CreationFlags: 0x08000000,
-		}
-		_ = cmd.Start()
+	if hideRun() {
 		return
 	}
-
-	runtime.LockOSThread()
 
 	exePath, err := os.Executable()
 	if err != nil {
 		die("executable path: " + err.Error())
 	}
-	baseDir := filepath.Dir(exePath)
-
-	cfg, err := LoadConfig(baseDir)
-	if err != nil {
-		die("load config: " + err.Error())
+	if err := core.Init(filepath.Dir(exePath)); err != nil {
+		die(err.Error())
 	}
-
-	app = &App{baseDir: baseDir, cfg: cfg}
-	if err := migrateLegacyComposer(baseDir, app.appendLog); err != nil {
-		app.appendLog("composer migration: " + err.Error())
-	}
-
-	// Before anything can reach for a cached download: drop files an earlier
-	// run left poisoned, so an install that already hit the Apache Lounge
-	// bug heals on this launch instead of failing at extract again (issue #1).
-	setDownloadCache(baseDir, app.appendLog)
-	sweepDownloadCache(baseDir, app.appendLog)
-
-	for i := range cfg.Services {
-		sc := &cfg.Services[i]
-		ms := &ManagedService{Conf: sc}
-		if sc.ExePath != "" {
-			ms.Service = &Service{
-				Name:    sc.Name,
-				ExePath: ExpandPath(sc.ExePath, baseDir),
-				Args:    expandArgsList(sc.Args, baseDir),
-				Port:    sc.Port,
-				WorkDir: ExpandPath(sc.WorkDir, baseDir),
-				Env:     expandArgsList(sc.Env, baseDir),
-			}
-			ms.Service.SetLogger(app.appendLog)
-		}
-		app.services = append(app.services, ms)
-	}
-
-	computeLayout()
-
-	killZombieChildren(baseDir)
-
-	initialCmdShow := co.SW_SHOW
-	if hasTrayFlag() {
-		initialCmdShow = co.SW_HIDE
-	}
-	wnd := ui.NewMain(
-		ui.OptsMain().
-			Title("GoAMPP — Local Web Stack Control Panel").
-			Size(ui.Dpi(winW, winH)).
-			Style(mainWindowStyle()).
-			ClassBrush(windowBgBrush()).
-			CmdShow(initialCmdShow),
-	)
-	app.wnd = wnd
-	configureMainWindowSizing(wnd)
-
-	wnd.On().WmDrawItem(handleDrawItem)
-
-	wnd.On().WmCtlColorStatic(staticBgHandler)
-
-	wnd.On().Wm(wmTrayCallback, func(p ui.Wm) uintptr {
-		handleTrayCallback(wnd, p)
-		return 0
-	})
-
-	wnd.On().WmCommand(trayMenuIdShow, co.CMD_MENU, func() {
-		showMainWindow(wnd)
-	})
-	wnd.On().WmCommand(trayMenuIdStart, co.CMD_MENU, func() {
-		go startEssentialStack()
-	})
-	wnd.On().WmCommand(trayMenuIdStop, co.CMD_MENU, func() {
-		go stopAllServices()
-	})
-	wnd.On().WmCommand(trayMenuIdAutorun, co.CMD_MENU, func() {
-		toggleAutoStart()
-	})
-	wnd.On().WmCommand(trayMenuIdQuit, co.CMD_MENU, func() {
-		quitApp(wnd)
-	})
-
-	wnd.On().WmSize(func(p ui.WmSize) {
-		if p.Request() == co.SIZE_REQ_MINIMIZED {
-			hideMainWindow(wnd)
-		}
-	})
-	wnd.On().WmClose(func() {
-		hideMainWindow(wnd)
-	})
-
-	buildMainLayout(wnd)
-	installUpdateRefreshUI()
-
-	app.statusBar = ui.NewStatusBar(wnd,
-		ui.OptsStatusBar().
-			FixedPart(ui.DpiX(220), "Ready").
-			FlexPart(1, truncateMid(baseDir, 70)).
-			FixedPart(ui.DpiX(125), "GoAMPP "+appVersion),
-	)
-
-	wnd.On().WmCreate(func(p ui.WmCreate) int {
-		h := wnd.Hwnd()
-
-		_ = h.DwmSetWindowAttribute(win.DwmAttrWindowCornerPreference(co.DWMWCP_ROUND))
-
-		if systemPrefersDark() {
-			_ = h.DwmSetWindowAttribute(win.DwmAttrUseImmersiveDarkMode(true))
-		}
-
-		if err := installTray(wnd); err != nil {
-			app.appendLog("tray: " + err.Error())
-		}
-
-		for _, ms := range app.services {
-			if ms.Service == nil {
-				continue
-			}
-			ms.Service.SetStateCallback(func(running bool, pid int) {
-				wnd.UiThread(refreshServiceList)
-			})
-		}
-
-		installServiceIcons()
-		refreshServiceList()
-		refreshVhostList()
-		refreshProjectList()
-		populateEditorDropdown()
-		showPage("services")
-
-		apachePath := filepath.Join(baseDir, "bin", "apache", "bin", "httpd.exe")
-		if _, err := os.Stat(apachePath); err == nil {
-			ensureApacheRuntimeFiles(baseDir, app.appendLog)
-		}
-
-		for _, name := range cfg.Settings.AutoStart {
-			ms := app.findService(name)
-			if !startupServiceEligible(ms) {
-				app.appendLog(fmt.Sprintf("[auto-start] skipping unavailable service %s", name))
-				continue
-			}
-			if err := ms.Service.Start(); err != nil {
-				app.appendLog(fmt.Sprintf("[auto-start] %s: %v", name, err))
-			}
-		}
-		return 0
-	})
-
-	app.appendLog(fmt.Sprintf("GoAMPP started at %s", time.Now().Format("15:04:05")))
-	app.appendLog(fmt.Sprintf("Base dir: %s", baseDir))
-	app.appendLog(fmt.Sprintf("Loaded %d services, %d vhosts from config.json",
-		len(cfg.Services), len(cfg.Vhosts)))
-
-	wnd.RunAsMain()
+	gui.Run(core.HasTrayFlag(), core.AutoStartServices)
 }
 
-func (a *App) findService(name string) *ManagedService {
-	for _, ms := range a.services {
-		if ms.Conf.Name == name {
-			return ms
-		}
-	}
-	return nil
-}
-
-func (a *App) appendLog(line string) {
-	ts := time.Now().Format("15:04:05")
-	entry := ts + " " + line + "\r\n"
-
-	a.logMu.Lock()
-	a.logBuf.WriteString(entry)
-
-	trimmed := false
-	if a.logBuf.Len() > maxLogBytes {
-		full := a.logBuf.String()
-		cut := len(full) / 4
-
-		if nl := strings.IndexByte(full[cut:], '\n'); nl >= 0 {
-			cut += nl + 1
-		}
-		a.logBuf.Reset()
-		a.logBuf.WriteString(full[cut:])
-		trimmed = true
-	}
-	text := a.logBuf.String()
-	a.logMu.Unlock()
-
-	if a.wnd == nil || a.logBox == nil {
-		return
-	}
-	a.wnd.UiThread(func() {
-		if trimmed {
-			resetLogBoxText(a, text)
-			return
-		}
-		appendLogBoxText(a, entry)
-	})
-}
-
-func expandArgsList(args []string, baseDir string) []string {
-	if len(args) == 0 {
-		return nil
-	}
-	out := make([]string, len(args))
-	for i, a := range args {
-		out[i] = ExpandPath(a, baseDir)
-	}
-	return out
-}
-
-func systemPrefersDark() bool {
-	k, err := registry.OpenKey(registry.CURRENT_USER,
-		`Software\Microsoft\Windows\CurrentVersion\Themes\Personalize`,
-		registry.QUERY_VALUE)
-	if err != nil {
+// hideRun handles "goampp.exe --hide-run <exe> [args]": start a program with
+// no console window and exit. Services use it for helpers that would
+// otherwise flash a console.
+func hideRun() bool {
+	if len(os.Args) < 3 || os.Args[1] != "--hide-run" {
 		return false
 	}
-	defer k.Close()
-	v, _, err := k.GetIntegerValue("AppsUseLightTheme")
-	if err != nil {
-		return false
+	cmd := exec.Command(os.Args[2], os.Args[3:]...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		HideWindow:    true,
+		CreationFlags: 0x08000000,
 	}
-	return v == 0
-}
-
-func openPath(path string) {
-
-	cmd := exec.Command("cmd", "/c", "start", "", path)
 	_ = cmd.Start()
+	return true
 }
 
-func openFolder(path string) {
-	if _, err := os.Stat(path); err != nil {
-		_ = os.MkdirAll(path, 0o755)
-	}
-	_ = exec.Command("explorer.exe", filepath.FromSlash(path)).Start()
-}
-
-func truncateMid(s string, max int) string {
-	if len(s) <= max {
-		return s
-	}
-	keep := (max - 3) / 2
-	return s[:keep] + "..." + s[len(s)-keep:]
-}
-
+// die reports a fatal startup error. It runs before the GUI exists, so it
+// uses a plain Win32 message box.
 func die(msg string) {
-
-	win.HWND(0).MessageBox(msg, "GoAMPP — fatal error",
-		co.MB_ICONERROR|co.MB_OK)
+	text, _ := windows.UTF16PtrFromString(msg)
+	title, _ := windows.UTF16PtrFromString("GoAMPP — fatal error")
+	_, _ = windows.MessageBox(0, text, title, windows.MB_ICONERROR|windows.MB_OK)
 	os.Exit(1)
 }

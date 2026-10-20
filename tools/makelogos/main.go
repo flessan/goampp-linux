@@ -1,7 +1,7 @@
 // makelogos converts service logo PNGs into small .ico files for the
 // Services ListView. Source order:
 //
-//  1. icon/<LocalName>.png    — user-curated logos (preferred)
+//  1. assets/logos/<LocalName>.png    — user-curated logos (preferred)
 //  2. <fallbackURL>            — downloaded from the web when (1) is missing
 //
 // Output goes into assets/icons/<service>.ico. Each .ico contains a
@@ -34,14 +34,14 @@ import (
 
 // logo describes one service-to-logo mapping.
 //
-// localName is the filename (without extension) in the user's icon/
+// localName is the filename (without extension) in assets/logos/
 // folder. If that file exists we use it. Otherwise we fall back to
 // downloading fallbackURL.
 //
 // outName is what we write under assets/icons/.
 type logo struct {
 	service     string
-	localName   string // resolved as icon/<localName>.png
+	localName   string // resolved as assets/logos/<localName>.png
 	fallbackURL string // used if the local file is missing
 	outName     string
 }
@@ -292,7 +292,7 @@ func main() {
 			err    error
 		)
 
-		localPath := filepath.Join("icon", l.localName+".png")
+		localPath := filepath.Join("assets", "logos", l.localName+".png")
 		if _, statErr := os.Stat(localPath); statErr == nil {
 			src, err = readLocalPNG(localPath)
 			source = "local"

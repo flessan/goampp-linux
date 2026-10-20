@@ -110,6 +110,8 @@ jobs:
     env:
       # Auto tag, pushed tag name, or "dev" for a manual dry run.
       VERSION: ${{ needs.tag.outputs.version || (github.ref_type == 'tag' && github.ref_name) || 'dev' }}
+      # The Fyne GUI is cgo.
+      CGO_ENABLED: "1"
 
     steps:
       - uses: actions/checkout@v7
@@ -118,6 +120,16 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+
+      # Use the image's MinGW-w64 gcc, installing it when the image has none.
+      - name: Set up gcc
+        shell: pwsh
+        run: |
+          if (-not (Get-Command gcc -ErrorAction SilentlyContinue)) {
+            choco install mingw -y --no-progress
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            "C:\ProgramData\mingw64\mingw64\bin" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+          }
 
       # Don't publish a broken build.
       - name: Vet
@@ -128,31 +140,35 @@ jobs:
 
       - name: Build
         shell: pwsh
-        # Mirrors build.bat: windowsgui so no console window appears, -s -w to
-        # strip symbols. appVersion is stamped from the tag so the About box
-        # cannot drift from the release it was built from.
+        # Mirrors build.bat. go-winres compiles the icon, manifest and version
+        # info into the exe (a .syso next to main.go), so Explorer, the taskbar
+        # and the installer's shortcuts show the GoAMPP icon. The version is
+        # stamped from the tag so the About box matches the release.
         run: |
-          go build -ldflags="-H windowsgui -s -w -X main.appVersion=$env:VERSION" -trimpath -o goampp.exe .
+          $num = if ($env:VERSION -eq 'dev') { '0.0.0' } else { $env:VERSION.TrimStart('v') }
+          go run github.com/tc-hib/go-winres@v0.3.3 simply --arch amd64 --manifest gui `
+            --icon assets/logo.png --product-name GoAMPP --file-description "GoAMPP local web stack" `
+            --original-filename goampp.exe --product-version $num --file-version $num
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          go build -ldflags="-H windowsgui -s -w -X goampp/internal/core.Version=$env:VERSION" -trimpath -o goampp.exe .
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      # README: run goampp.exe next to goampp.exe.manifest, logo.ico and
-      # assets/icons/*.ico. tray.go needs logo.ico beside the exe, and the
-      # welcome page reads assets/icons plus logo.png.
+      # Icons, logos and the manifest live inside goampp.exe; only the VC++
+      # runtime that PostgreSQL's post-install hook seeds sits beside it.
       - name: Package portable bundle
         shell: pwsh
         run: |
           $stage = "dist/goampp"
-          New-Item -ItemType Directory -Force $stage/assets | Out-Null
-          Copy-Item goampp.exe, goampp.exe.manifest, logo.ico, logo.png $stage/
-          Copy-Item assets/icons $stage/assets/ -Recurse
-          # PostgreSQL's post-install hook seeds these into pgsql/bin.
+          New-Item -ItemType Directory -Force $stage | Out-Null
+          Copy-Item goampp.exe $stage/
           Copy-Item runtime $stage/ -Recurse
 
           # Ship a README so the zip explains itself.
           @"
           GoAMPP $env:VERSION - portable build
 
-          Extract anywhere and run goampp.exe. Keep the whole folder together:
-          the manifest, logo.ico and assets/ are read at runtime.
+          Extract anywhere and run goampp.exe. Keep runtime\ next to it:
+          PostgreSQL installs copy the VC++ runtime from there.
 
           Binaries and runtimes (Apache, PHP, MySQL, ...) are downloaded on
           first install from within the app.

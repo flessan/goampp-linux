@@ -5,16 +5,8 @@ setlocal
 set VERSION=%~1
 if "%VERSION%"=="" set VERSION=0.0.0
 
-set GOOS=windows
-set GOARCH=amd64
-set CGO_ENABLED=0
-
-echo Building goampp.exe v%VERSION%...
-go build -ldflags="-H windowsgui -s -w -X main.appVersion=v%VERSION%" -trimpath -o goampp.exe .
-if errorlevel 1 (
-    echo Build FAILED.
-    exit /b 1
-)
+call "%~dp0build.bat" %VERSION%
+if errorlevel 1 exit /b 1
 
 REM iscc on PATH, else a machine-wide or per-user (winget) Inno Setup 6.
 set ISCC=iscc
