@@ -21,7 +21,7 @@ func init() {
 		StripTop:   "crystal-1.15.1-windows-x86_64-msvc-unsupported/",
 		Kind:       packages.Zip,
 		CheckFile:  "crystal.exe",
-		Notes:      "Crystal 1.15.1 — experimental Windows build; statically-typed Ruby-like language.",
+		Notes:      "Crystal — experimental Windows build; statically-typed Ruby-like language.",
 	}, packages.WithStripTop(
 		packages.ResolveGitHubLatestAsset(
 			"crystal-lang", "crystal",

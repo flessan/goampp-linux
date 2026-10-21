@@ -20,7 +20,7 @@ func init() {
 		StripTop:   "scala-2.13.16/",
 		Kind:       packages.Zip,
 		CheckFile:  "bin/scala.bat",
-		Notes:      "Scala 2.13 LTS — requires Java (install Java card first).",
+		Notes:      "Scala 2.13 — requires Java (install Java first).",
 	}, resolveScala213Latest)
 }
 
