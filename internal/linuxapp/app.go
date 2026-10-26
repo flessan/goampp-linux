@@ -823,9 +823,23 @@ func serviceIsRunning(manager, unit string) bool {
 	return err == nil
 }
 
-func serviceCommand(manager, unit, action string) (string, []string, error) {
+func validLinuxServiceUnit(unit string) bool {
 	if unit == "" {
-		return "", nil, fmt.Errorf("service name is required")
+		return false
+	}
+	for _, r := range unit {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') ||
+			(r >= '0' && r <= '9') || strings.ContainsRune("_.@:-", r) {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
+func serviceCommand(manager, unit, action string) (string, []string, error) {
+	if !validLinuxServiceUnit(unit) {
+		return "", nil, fmt.Errorf("service unit is empty or contains unsupported characters")
 	}
 	switch action {
 	case "start", "stop", "restart", "status":
