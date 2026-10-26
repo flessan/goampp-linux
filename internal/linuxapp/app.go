@@ -67,15 +67,26 @@ var toolDefinitions = []toolDefinition{
 
 func Run() {
 	a := app.NewWithID("cc.thio.goampp.linux")
+	if logo := linuxLogoResource(); logo != nil {
+		a.SetIcon(logo)
+	}
 	w := a.NewWindow("GoAMPP for Linux")
-	w.Resize(fyne.NewSize(900, 650))
+	w.Resize(fyne.NewSize(1120, 760))
+	w.CenterOnScreen()
 
 	projectDir := projectDirectory()
 	_ = os.MkdirAll(projectDir, 0o755)
 
-	title := widget.NewLabelWithStyle("GoAMPP for Linux", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
-	subtitle := widget.NewLabel("Native desktop panel for distribution-managed development services.")
-	top := container.NewVBox(title, subtitle, widget.NewSeparator())
+	brandTitle := widget.NewLabelWithStyle("GoAMPP", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+	brandSubtitle := widget.NewLabel("A local development workspace for Linux")
+	brand := container.NewHBox(
+		linuxImage(linuxLogoResource(), 42, "GoAMPP"),
+		linuxGap(12),
+		container.NewVBox(brandTitle, brandSubtitle),
+	)
+	platformLabel := widget.NewLabelWithStyle("NATIVE LINUX", fyne.TextAlignTrailing, fyne.TextStyle{Bold: true})
+	header := linuxSurface(container.NewBorder(nil, nil, brand, platformLabel, linuxGap(1)), 12, 12, 16, 16)
+	top := container.NewVBox(header, linuxGap(8))
 
 	serviceList := container.NewVBox()
 	serviceStatus := widget.NewLabel("Services are detected from your system PATH and service manager.")
@@ -90,7 +101,10 @@ func Run() {
 			states := discoverServices()
 			fyne.Do(func() {
 				serviceList.Objects = nil
-				for _, state := range states {
+				for i, state := range states {
+					if i > 0 {
+						serviceList.Add(linuxGap(8))
+					}
 					serviceList.Add(makeServiceCard(w, state, refreshServices))
 				}
 				serviceList.Refresh()
@@ -105,25 +119,38 @@ func Run() {
 			})
 		}()
 	}
-	refreshButton = widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), refreshServices)
+	serviceStatus.Wrapping = fyne.TextWrapWord
+	refreshButton = widget.NewButtonWithIcon("Refresh services", theme.ViewRefreshIcon(), refreshServices)
+	serviceToolbar := container.NewBorder(nil, nil, serviceStatus, refreshButton, linuxGap(1))
 	servicePage := container.NewBorder(
-		container.NewVBox(serviceStatus, refreshButton, widget.NewSeparator()),
-		nil, nil, nil, container.NewVScroll(serviceList),
+		linuxPad(container.NewVBox(
+			linuxPageIntro("Services", "Inspect and control web servers, databases, and caches already installed on this system.", theme.ComputerIcon()),
+			linuxGap(8),
+			linuxSurface(serviceToolbar, 8, 8, 12, 12),
+		), 6, 4, 14, 14),
+		nil, nil, nil,
+		container.NewVScroll(linuxPad(serviceList, 8, 10, 14, 14)),
 	)
 
 	toolsList := container.NewVBox()
 	var refreshTools func()
 	refreshTools = func() {
 		toolsList.Objects = nil
-		for _, tool := range toolDefinitions {
+		for i, tool := range toolDefinitions {
+			if i > 0 {
+				toolsList.Add(linuxGap(8))
+			}
 			toolsList.Add(makeToolCard(tool))
 		}
 		toolsList.Refresh()
 	}
-	toolsPage := container.NewBorder(
-		widget.NewLabel("Developer tools already installed on this Linux system"),
-		nil, nil, nil, container.NewVScroll(toolsList),
-	)
+	toolsPage := container.NewVScroll(linuxPad(container.NewVBox(
+		linuxPageIntro("Developer tools", "Check the command-line runtimes available for your projects.", theme.DocumentCreateIcon()),
+		linuxGap(8),
+		linuxSurface(widget.NewLabel("Versions are queried in the background. Missing tools can be installed with your distribution's package manager."), 8, 8, 12, 12),
+		linuxGap(10),
+		toolsList,
+	), 8, 12, 14, 14))
 
 	rootLabel := widget.NewLabel(projectDir)
 	rootLabel.Wrapping = fyne.TextWrapBreak
@@ -210,10 +237,14 @@ func Run() {
 					actions = append(actions, logButton)
 				}
 				actions = append(actions, openButton)
-				projectList.Add(container.NewPadded(container.NewBorder(
-					nil, widget.NewSeparator(), nil, container.NewHBox(actions...),
-					widget.NewLabelWithStyle(projectName, fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-				)))
+				nameLabel := widget.NewLabelWithStyle(projectName, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+				pathLabel := widget.NewLabel(filepath.Join(projectDir, projectName))
+				pathLabel.Truncation = fyne.TextTruncateEllipsis
+				projectDetails := container.NewVBox(nameLabel, pathLabel)
+				projectIdentity := container.NewHBox(linuxLetterMark(projectName, 38), linuxGap(10), projectDetails)
+				projectRow := container.NewBorder(nil, nil, projectIdentity, container.NewHBox(actions...), linuxGap(1))
+				projectList.Add(linuxSurface(projectRow, 8, 8, 10, 10))
+				projectList.Add(linuxGap(8))
 			}
 		}
 		projectList.Refresh()
@@ -229,35 +260,40 @@ func Run() {
 		refreshProjects()
 		dialog.ShowInformation("Project created", "Your starter files are ready. Open the project folder or read README.md for the next steps.", w)
 	})
-	projectHeader := container.NewVBox(
-		widget.NewLabelWithStyle("Projects", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+	projectActions := container.NewHBox(
+		widget.NewButtonWithIcon("Open folder", theme.FolderOpenIcon(), func() {
+			if err := openExternal(projectDir); err != nil {
+				dialog.ShowError(err, w)
+			}
+		}),
+		widget.NewButtonWithIcon("Open localhost", theme.ComputerIcon(), func() {
+			if err := openExternal("http://localhost/"); err != nil {
+				dialog.ShowError(err, w)
+			}
+		}),
+		widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), refreshProjects),
+	)
+	workspaceCard := linuxSurface(container.NewVBox(
+		widget.NewLabelWithStyle("Project workspace", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		rootLabel,
-		container.NewHBox(
-			widget.NewButtonWithIcon("Open projects folder", theme.FolderOpenIcon(), func() {
-				if err := openExternal(projectDir); err != nil {
-					dialog.ShowError(err, w)
-				}
-			}),
-			widget.NewButtonWithIcon("Open localhost", theme.ComputerIcon(), func() {
-				if err := openExternal("http://localhost/"); err != nil {
-					dialog.ShowError(err, w)
-				}
-			}),
-			widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), refreshProjects),
-		),
-		widget.NewSeparator(),
+		projectActions,
+	), 10, 10, 12, 12)
+	createCard := linuxSurface(container.NewVBox(
 		widget.NewLabelWithStyle("Create a new project", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		container.NewVBox(
-			container.NewGridWithColumns(2,
-				widget.NewLabel("Project name"), projectNameEntry,
-				widget.NewLabel("Starter template"), templateSelect,
-			),
-			templateDescription,
+		linuxGap(8),
+		container.NewGridWithColumns(2,
+			widget.NewLabel("Project name"), projectNameEntry,
+			widget.NewLabel("Starter template"), templateSelect,
 		),
+		linuxGap(4),
+		templateDescription,
+		linuxGap(8),
 		createButton,
 		projectStatus,
-		widget.NewSeparator(),
-		widget.NewLabel("Install web servers, databases, and runtimes with your distribution's package manager. GoAMPP does not install system packages automatically."),
+	), 10, 10, 12, 12)
+	installCard := linuxSurface(container.NewVBox(
+		widget.NewLabelWithStyle("System packages", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		widget.NewLabel("Install web servers, databases, and runtimes with your distribution's package manager. GoAMPP never installs system packages automatically."),
 		widget.NewButton("Show installation command", func() {
 			command := suggestedInstallCommand()
 			entry := widget.NewEntry()
@@ -270,10 +306,21 @@ func Run() {
 			})
 			dialog.ShowCustom("Native package command", "Close", container.NewVBox(entry, copyButton), w)
 		}),
-		widget.NewSeparator(),
-		widget.NewLabelWithStyle("Your projects", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+	), 10, 10, 12, 12)
+	projectHeader := container.NewVBox(
+		linuxPageIntro("Projects", "Create, run, and inspect local development starters.", theme.FolderIcon()),
+		linuxGap(10),
+		workspaceCard,
+		linuxGap(10),
+		createCard,
+		linuxGap(10),
+		installCard,
+		linuxGap(12),
+		linuxPageIntro("Your projects", "Run a starter, inspect its logs, or open its folder.", theme.FolderOpenIcon()),
+		linuxGap(6),
+		linuxPad(projectList, 2, 10, 2, 2),
 	)
-	projectsPage := container.NewBorder(projectHeader, nil, nil, nil, container.NewVScroll(projectList))
+	projectsPage := container.NewVScroll(linuxPad(projectHeader, 8, 12, 14, 14))
 	refreshProjects()
 
 	tabs := container.NewAppTabs(
@@ -281,7 +328,11 @@ func Run() {
 		container.NewTabItem("Developer tools", toolsPage),
 		container.NewTabItem("Projects", container.NewPadded(projectsPage)),
 	)
-	w.SetContent(container.NewBorder(top, nil, nil, nil, tabs))
+	w.SetContent(container.NewBorder(
+		linuxPad(top, 10, 4, 18, 18),
+		nil, nil, nil,
+		linuxPad(tabs, 0, 12, 18, 18),
+	))
 
 	refreshServices()
 	refreshTools()
@@ -314,15 +365,14 @@ func makeServiceCard(w fyne.Window, state serviceState, refresh func()) fyne.Can
 	}
 
 	info := container.NewVBox(
-		widget.NewLabelWithStyle(state.Definition.Name, fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		widget.NewLabel(detail),
 		widget.NewLabel("Status: "+status),
+		widget.NewLabel(detail),
 	)
 	var action *widget.Button
-	action = widget.NewButton("Start", func() {
+	action = widget.NewButtonWithIcon("Start", theme.MediaPlayIcon(), func() {
 		runServiceAction(w, action, state.Manager, state.Unit, "start", refresh)
 	})
-	action.SetIcon(theme.MediaPlayIcon())
+	action.Importance = widget.MediumImportance
 	if state.Running {
 		action.SetText("Stop")
 		action.SetIcon(theme.MediaStopIcon())
@@ -335,7 +385,12 @@ func makeServiceCard(w fyne.Window, state serviceState, refresh func()) fyne.Can
 		action.SetIcon(theme.InfoIcon())
 		action.Disable()
 	}
-	return container.NewPadded(container.NewBorder(nil, widget.NewSeparator(), nil, action, info))
+	identity := container.NewHBox(
+		linuxImage(linuxServiceResource(state.Definition.Name), 38, state.Definition.Name),
+		linuxGap(10),
+		info,
+	)
+	return linuxSurface(container.NewBorder(nil, nil, identity, action, linuxGap(1)), 10, 10, 12, 12)
 }
 
 func runServiceAction(w fyne.Window, action *widget.Button, manager, unit, verb string, refresh func()) {
@@ -361,10 +416,10 @@ func makeToolCard(tool toolDefinition) fyne.CanvasObject {
 	binary := findExecutable(tool.Binaries)
 	status := "Not installed"
 	if binary != "" {
-		status = binary
+		status = "Installed at " + binary
 	}
 	statusLabel := widget.NewLabel(status)
-	statusLabel.Wrapping = fyne.TextWrapBreak
+	statusLabel.Truncation = fyne.TextTruncateEllipsis
 	if binary != "" && len(tool.Arguments) > 0 {
 		go func(binary string, args []string, label *widget.Label) {
 			output, err := runCommandWithTimeout(2*time.Second, binary, args...)
@@ -378,16 +433,19 @@ func makeToolCard(tool toolDefinition) fyne.CanvasObject {
 				}
 				version := line
 				fyne.Do(func() {
-					label.SetText(binary + "\n" + version)
+					label.SetText(binary + " · " + version)
 				})
 				return
 			}
 		}(binary, append([]string(nil), tool.Arguments...), statusLabel)
 	}
-	return container.NewPadded(container.NewBorder(
-		nil, widget.NewSeparator(), nil, statusLabel,
-		widget.NewLabelWithStyle(tool.Name, fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-	))
+	title := widget.NewLabelWithStyle(tool.Name, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+	body := container.NewHBox(
+		linuxImage(linuxToolResource(tool.Name), 36, tool.Name),
+		linuxGap(10),
+		container.NewVBox(title, statusLabel),
+	)
+	return linuxSurface(body, 9, 9, 10, 10)
 }
 
 func runCommandWithTimeout(timeout time.Duration, command string, args ...string) ([]byte, error) {
