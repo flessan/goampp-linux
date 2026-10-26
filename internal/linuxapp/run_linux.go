@@ -489,9 +489,25 @@ func waitForManagedProjectExit(managed *managedProject, timeout time.Duration) b
 	}
 }
 
+func projectPreviewReadyTimeout(projectDir string) time.Duration {
+	data, err := os.ReadFile(filepath.Join(projectDir, ".goampp-framework"))
+	if err != nil {
+		return 15 * time.Second
+	}
+	switch strings.TrimSpace(string(data)) {
+	case "Spring Boot":
+		return 2 * time.Minute
+	case "Next.js", "Vite + React", "NestJS", "AdonisJS", "Laravel", "Laravel + Livewire",
+		"Symfony", "CodeIgniter 4", "WordPress", "Flask", "Django", "FastAPI", "Gin (Go)":
+		return 75 * time.Second
+	default:
+		return 30 * time.Second
+	}
+}
+
 func openPreviewWhenReady(projectDir, projectName, previewURL string, onDone func(error)) {
 	go func() {
-		err := waitForProjectEndpoint(projectDir, projectName, previewURL, 15*time.Second)
+		err := waitForProjectEndpoint(projectDir, projectName, previewURL, projectPreviewReadyTimeout(projectDir))
 		if err == nil {
 			err = openExternal(previewURL)
 		}
