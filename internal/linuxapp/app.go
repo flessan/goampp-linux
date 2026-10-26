@@ -67,6 +67,7 @@ var toolDefinitions = []toolDefinition{
 
 func Run() {
 	a := app.NewWithID("cc.thio.goampp.linux")
+	a.Settings().SetTheme(newLinuxGoamppTheme())
 	if logo := linuxLogoResource(); logo != nil {
 		a.SetIcon(logo)
 	}
@@ -77,41 +78,93 @@ func Run() {
 	projectDir := projectDirectory()
 	_ = os.MkdirAll(projectDir, 0o755)
 
-	brandTitle := widget.NewLabelWithStyle("GoAMPP", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
-	brandSubtitle := widget.NewLabel("A local development workspace for Linux")
-	brand := container.NewHBox(
-		linuxImage(linuxLogoResource(), 42, "GoAMPP"),
-		linuxHGap(12),
-		container.NewVBox(brandTitle, brandSubtitle),
-	)
-	platformLabel := widget.NewLabelWithStyle("NATIVE LINUX", fyne.TextAlignTrailing, fyne.TextStyle{Bold: true})
-	header := linuxSurface(container.NewBorder(nil, nil, brand, platformLabel, linuxGap(1)), 12, 12, 16, 16)
-	top := container.NewVBox(header, linuxGap(8))
-
 	serviceList := container.NewVBox()
 	serviceStatus := widget.NewLabel("Services are detected from your system PATH and service manager.")
+	serviceStatus.Wrapping = fyne.TextWrapWord
+	serviceSearch := widget.NewEntry()
+	serviceSearch.SetPlaceHolder("Search services and runtimes")
+	serviceSearch.ActionItem = widget.NewIcon(theme.NewDisabledResource(theme.SearchIcon()))
+	var cachedServices []serviceState
 	var refreshServices func()
 	var refreshButton *widget.Button
+
+	renderServiceList := func(states []serviceState) {
+		serviceList.Objects = nil
+		query := strings.ToLower(strings.TrimSpace(serviceSearch.Text))
+		groups := []struct {
+			title string
+			match func(serviceState) bool
+		}{
+			{"WEB SERVERS", func(state serviceState) bool { return state.Definition.Name == "Apache HTTP Server" || state.Definition.Name == "Nginx" }},
+			{"DATABASES & CACHES", func(state serviceState) bool {
+				return state.Definition.Name == "MariaDB / MySQL" || state.Definition.Name == "PostgreSQL" ||
+					state.Definition.Name == "Redis" || state.Definition.Name == "RabbitMQ"
+			}},
+			{"LANGUAGES & RUNTIMES", func(state serviceState) bool { return state.Definition.Name == "PHP-FPM" }},
+		}
+		for _, group := range groups {
+			var matched []serviceState
+			for _, state := range states {
+				if group.match(state) && (query == "" ||
+					strings.Contains(strings.ToLower(state.Definition.Name+" "+state.Unit+" "+state.Binary), query)) {
+					matched = append(matched, state)
+				}
+			}
+			if len(matched) == 0 {
+				continue
+			}
+			serviceList.Add(linuxSectionLabel(group.title))
+			serviceList.Add(linuxVSpace(3))
+			rows := container.NewVBox()
+			for i, state := range matched {
+				if i > 0 {
+					rows.Add(linuxVSpace(5))
+				}
+				rows.Add(makeServiceCard(w, state, refreshServices))
+			}
+			serviceList.Add(rows)
+			serviceList.Add(linuxVSpace(8))
+		}
+		var matchingTools []toolDefinition
+		for _, tool := range toolDefinitions {
+			if query == "" || strings.Contains(strings.ToLower(tool.Name+" "+strings.Join(tool.Binaries, " ")), query) {
+				matchingTools = append(matchingTools, tool)
+			}
+		}
+		if len(matchingTools) > 0 {
+			serviceList.Add(linuxSectionLabel("LANGUAGES & DEVELOPER TOOLS"))
+			serviceList.Add(linuxVSpace(3))
+			rows := container.NewVBox()
+			for i, tool := range matchingTools {
+				if i > 0 {
+					rows.Add(linuxVSpace(5))
+				}
+				rows.Add(makeToolCard(tool))
+			}
+			serviceList.Add(rows)
+		}
+		if len(serviceList.Objects) == 0 {
+			serviceList.Add(container.NewCenter(widget.NewLabel("No matching services or runtimes.")))
+		}
+		serviceList.Refresh()
+	}
+
+	serviceSearch.OnChanged = func(string) { renderServiceList(cachedServices) }
 	refreshServices = func() {
 		serviceStatus.SetText("Checking installed services...")
+		linuxSetStatus("Refreshing installed services")
 		if refreshButton != nil {
 			refreshButton.Disable()
 		}
 		go func() {
 			states := discoverServices()
 			fyne.Do(func() {
-				serviceList.Objects = nil
-				for i, state := range states {
-					if i > 0 {
-						serviceList.Add(linuxGap(8))
-					}
-					serviceList.Add(makeServiceCard(w, state, refreshServices))
-				}
-				serviceList.Refresh()
+				cachedServices = states
+				renderServiceList(cachedServices)
 				if len(states) > 0 && states[0].Manager == "" {
 					serviceStatus.SetText(fmt.Sprintf("No supported service manager detected. %d service types can still be inspected, but service controls are unavailable.", len(states)))
 				} else {
-					serviceStatus.SetText(fmt.Sprintf("Showing %d supported service types. GoAMPP does not install or alter system packages without your action.", len(states)))
+					serviceStatus.SetText(fmt.Sprintf("Showing %d service types and %d developer tools. GoAMPP never changes system packages without your action.", len(states), len(toolDefinitions)))
 				}
 				if refreshButton != nil {
 					refreshButton.Enable()
@@ -119,38 +172,13 @@ func Run() {
 			})
 		}()
 	}
-	serviceStatus.Wrapping = fyne.TextWrapWord
-	refreshButton = widget.NewButtonWithIcon("Refresh services", theme.ViewRefreshIcon(), refreshServices)
-	serviceToolbar := container.NewBorder(nil, nil, serviceStatus, refreshButton, linuxGap(1))
+	refreshButton = widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), refreshServices)
+	serviceToolbar := container.NewBorder(nil, nil, serviceStatus, linuxMinSize(serviceSearch, 210, 0), linuxGap(1))
 	servicePage := container.NewBorder(
-		linuxPad(container.NewVBox(
-			linuxPageIntro("Services", "Inspect and control web servers, databases, and caches already installed on this system.", theme.ComputerIcon()),
-			linuxGap(8),
-			linuxSurface(serviceToolbar, 8, 8, 12, 12),
-		), 6, 4, 14, 14),
+		linuxPad(linuxSurface(serviceToolbar, 8, 8, 12, 12), 0, 8, 0, 0),
 		nil, nil, nil,
-		container.NewVScroll(linuxPad(serviceList, 8, 10, 14, 14)),
+		container.NewVScroll(linuxPad(serviceList, 4, 10, 2, 2)),
 	)
-
-	toolsList := container.NewVBox()
-	var refreshTools func()
-	refreshTools = func() {
-		toolsList.Objects = nil
-		for i, tool := range toolDefinitions {
-			if i > 0 {
-				toolsList.Add(linuxGap(8))
-			}
-			toolsList.Add(makeToolCard(tool))
-		}
-		toolsList.Refresh()
-	}
-	toolsPage := container.NewVScroll(linuxPad(container.NewVBox(
-		linuxPageIntro("Developer tools", "Check the command-line runtimes available for your projects.", theme.DocumentCreateIcon()),
-		linuxGap(8),
-		linuxSurface(widget.NewLabel("Versions are queried in the background. Missing tools can be installed with your distribution's package manager."), 8, 8, 12, 12),
-		linuxGap(10),
-		toolsList,
-	), 8, 12, 14, 14))
 
 	rootLabel := widget.NewLabel(projectDir)
 	rootLabel.Wrapping = fyne.TextWrapBreak
