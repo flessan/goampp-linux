@@ -50,6 +50,9 @@ var linuxToolAssets = map[string]string{
 // linuxAsset loads an image from the repository's embedded asset filesystem.
 // ICO files are converted to their largest embedded PNG image for Fyne.
 func linuxAsset(name string) fyne.Resource {
+	if name == "" {
+		return nil
+	}
 	linuxAssetMu.Lock()
 	defer linuxAssetMu.Unlock()
 	if res, ok := linuxAssetCache[name]; ok {
@@ -123,6 +126,7 @@ func linuxImage(res fyne.Resource, size float32, fallbackName string) fyne.Canva
 	img := canvas.NewImageFromResource(res)
 	img.FillMode = canvas.ImageFillContain
 	img.ScaleMode = canvas.ImageScaleSmooth
+	img.SetMinSize(fyne.NewSize(size, size))
 	return container.NewGridWrap(fyne.NewSize(size, size), container.NewCenter(img))
 }
 
@@ -168,11 +172,17 @@ func linuxGap(height float32) fyne.CanvasObject {
 	return gap
 }
 
+func linuxHGap(width float32) fyne.CanvasObject {
+	gap := canvas.NewRectangle(color.Transparent)
+	gap.SetMinSize(fyne.NewSize(width, 1))
+	return gap
+}
+
 func linuxPageIntro(title, subtitle string, icon fyne.Resource) fyne.CanvasObject {
 	iconView := container.NewGridWrap(fyne.NewSize(42, 42), widget.NewIcon(icon))
 	heading := container.NewVBox(
 		widget.NewLabelWithStyle(title, fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewLabel(subtitle),
 	)
-	return linuxSurface(container.NewHBox(iconView, linuxGap(1), heading), 10, 10, 12, 12)
+	return linuxSurface(container.NewHBox(iconView, linuxHGap(12), heading), 10, 10, 12, 12)
 }
