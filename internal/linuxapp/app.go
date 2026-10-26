@@ -472,7 +472,7 @@ func Run() {
 						dialog.ShowError(err, w)
 					}
 				}),
-				widget.NewButtonWithIcon("PostgreSQL console", theme.DatabaseIcon(), func() {
+				widget.NewButtonWithIcon("PostgreSQL console", theme.ComputerIcon(), func() {
 					if _, err := exec.LookPath("psql"); err != nil {
 						showLinuxPackageCommand(w, "PostgreSQL client", true)
 						return
