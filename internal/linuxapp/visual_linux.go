@@ -9,6 +9,7 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"time"
 	"unicode"
 
 	"fyne.io/fyne/v2"
@@ -24,7 +25,71 @@ import (
 var (
 	linuxAssetMu    sync.Mutex
 	linuxAssetCache = map[string]fyne.Resource{}
+
+	linuxToolProbeMu      sync.Mutex
+	linuxToolVersionCache = map[string]string{}
+	linuxToolProbePending = map[string]bool{}
+	linuxToolProbeWaiters = map[string][]*widget.Label{}
 )
+
+func linuxCachedToolVersion(name string) (string, bool) {
+	linuxToolProbeMu.Lock()
+	defer linuxToolProbeMu.Unlock()
+	version, ok := linuxToolVersionCache[name]
+	return version, ok
+}
+
+func linuxRequestToolVersion(name, binary string, args []string, label *widget.Label) {
+	linuxToolProbeMu.Lock()
+	if version, ok := linuxToolVersionCache[name]; ok {
+		linuxToolProbeMu.Unlock()
+		label.SetText(binary + " · " + version)
+		return
+	}
+	linuxToolProbeWaiters[name] = append(linuxToolProbeWaiters[name], label)
+	if linuxToolProbePending[name] {
+		linuxToolProbeMu.Unlock()
+		return
+	}
+	linuxToolProbePending[name] = true
+	linuxToolProbeMu.Unlock()
+
+	go func() {
+		output, err := runCommandWithTimeout(2*time.Second, binary, args...)
+		version := ""
+		if err == nil {
+			for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
+				line = strings.TrimSpace(line)
+				if line != "" {
+					version = line
+					break
+				}
+			}
+		}
+		fyne.Do(func() {
+			linuxToolProbeMu.Lock()
+			delete(linuxToolProbePending, name)
+			waiters := append([]*widget.Label(nil), linuxToolProbeWaiters[name]...)
+			delete(linuxToolProbeWaiters, name)
+			if version != "" {
+				linuxToolVersionCache[name] = version
+			}
+			linuxToolProbeMu.Unlock()
+			if version != "" {
+				for _, waiter := range waiters {
+					waiter.SetText(binary + " · " + version)
+				}
+			}
+		})
+	}()
+}
+
+func linuxResetToolVersionCache() {
+	linuxToolProbeMu.Lock()
+	linuxToolVersionCache = make(map[string]string)
+	linuxToolProbeMu.Unlock()
+}
+
 
 var linuxServiceAssets = map[string]string{
 	"Apache HTTP Server": "icons/apache.ico",
