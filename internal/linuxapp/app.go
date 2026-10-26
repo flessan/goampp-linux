@@ -80,6 +80,7 @@ var toolDefinitions = []toolDefinition{
 	{Name: "SQLite", Binaries: []string{"sqlite3"}, Arguments: []string{"--version"}},
 	{Name: "Git", Binaries: []string{"git"}, Arguments: []string{"--version"}},
 	{Name: "Docker CLI", Binaries: []string{"docker"}, Arguments: []string{"--version"}},
+	{Name: "PostgreSQL client", Binaries: []string{"psql"}, Arguments: []string{"--version"}},
 }
 
 func Run() {
@@ -357,6 +358,15 @@ func Run() {
 				dialog.ShowError(err, w)
 			}
 		}),
+		widget.NewButtonWithIcon("Terminal", theme.ComputerIcon(), func() {
+			shell := "bash"
+			if _, err := exec.LookPath(shell); err != nil {
+				shell = "sh"
+			}
+			if err := openLinuxTerminal(projectDir, shell, "-l"); err != nil {
+				dialog.ShowError(err, w)
+			}
+		}),
 		widget.NewButtonWithIcon("Open localhost", theme.ComputerIcon(), func() {
 			if err := openExternal("http://localhost/"); err != nil {
 				dialog.ShowError(err, w)
@@ -452,11 +462,31 @@ func Run() {
 		linuxSurface(container.NewVBox(
 			widget.NewLabelWithStyle("System package manager", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 			widget.NewLabel("Service installation and system changes remain explicit user actions."),
-			widget.NewButtonWithIcon("Copy suggested install command", theme.ContentCopyIcon(), func() {
-				w.Clipboard().SetContent(suggestedInstallCommand())
-				linuxAddLog("Suggested package command copied")
-				dialog.ShowInformation("Copied", "Installation command copied to clipboard.", w)
-			}),
+			container.NewHBox(
+				widget.NewButtonWithIcon("Open terminal", theme.ComputerIcon(), func() {
+					shell := "bash"
+					if _, err := exec.LookPath(shell); err != nil {
+						shell = "sh"
+					}
+					if err := openLinuxTerminal(projectDir, shell, "-l"); err != nil {
+						dialog.ShowError(err, w)
+					}
+				}),
+				widget.NewButtonWithIcon("PostgreSQL console", theme.DatabaseIcon(), func() {
+					if _, err := exec.LookPath("psql"); err != nil {
+						showLinuxPackageCommand(w, "PostgreSQL client", true)
+						return
+					}
+					if err := openLinuxTerminal(projectDir, "psql"); err != nil {
+						dialog.ShowError(err, w)
+					}
+				}),
+				widget.NewButtonWithIcon("Copy install command", theme.ContentCopyIcon(), func() {
+					w.Clipboard().SetContent(suggestedInstallCommand())
+					linuxAddLog("Suggested package command copied")
+					dialog.ShowInformation("Copied", "Installation command copied to clipboard.", w)
+				}),
+			),
 		), 10, 10, 12, 12),
 		linuxSectionLabel("ABOUT"),
 		linuxSurface(container.NewHBox(
