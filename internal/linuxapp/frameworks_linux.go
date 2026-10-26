@@ -97,6 +97,11 @@ func createLinuxFrameworkProject(root, name string, recipe linuxFrameworkRecipe,
 	if log == nil {
 		log = func(string) {}
 	}
+	for _, required := range recipe.Required {
+		if _, err := exec.LookPath(required); err != nil {
+			return "", fmt.Errorf("%s is required but not found on PATH. Install it with your Linux distribution package manager and try again", required)
+		}
+	}
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		return "", fmt.Errorf("create projects directory: %w", err)
 	}
@@ -128,11 +133,6 @@ func createLinuxFrameworkProject(root, name string, recipe linuxFrameworkRecipe,
 		}
 	}()
 	logOutput := &linuxFrameworkLogWriter{file: logFile, onLine: log}
-	for _, required := range recipe.Required {
-		if _, err := exec.LookPath(required); err != nil {
-			return target, fmt.Errorf("%s is required but not found on PATH. Install it with your Linux distribution package manager and try again", required)
-		}
-	}
 	if recipe.DownloadURL != "" {
 		log("Downloading framework template for " + recipe.Name)
 		if err := downloadLinuxFrameworkZip(recipe.DownloadURL, target, recipe.StripTop, log); err != nil {
