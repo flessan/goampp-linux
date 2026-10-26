@@ -207,10 +207,26 @@ func buildLinuxConfigEditorPage(w fyne.Window) fyne.CanvasObject {
 		refreshOptions()
 		linuxAddLog("Config editor loaded " + currentPath)
 	}
+	requestLoadPath := func(nextPath string) {
+		if nextPath == "" || filepath.Clean(nextPath) == currentPath {
+			return
+		}
+		if dirty && currentPath != "" {
+			dialog.ShowConfirm("Discard unsaved changes?", "Switching files will discard unsaved edits to "+currentPath+". Save first if you need to keep them.", func(ok bool) {
+				if ok {
+					loadPath(nextPath)
+				} else {
+					refreshOptions()
+				}
+			}, w)
+			return
+		}
+		loadPath(nextPath)
+	}
 	files.OnChanged = func(label string) {
 		for i, option := range labels {
 			if option == label && i < len(candidates) && candidates[i] != currentPath {
-				loadPath(candidates[i])
+				requestLoadPath(candidates[i])
 				return
 			}
 		}
@@ -232,7 +248,7 @@ func buildLinuxConfigEditorPage(w fyne.Window) fyne.CanvasObject {
 			}
 			path := reader.URI().Path()
 			_ = reader.Close()
-			loadPath(path)
+			requestLoadPath(path)
 		}, w)
 		d.Show()
 	})
