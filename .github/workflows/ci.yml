@@ -119,15 +119,38 @@ jobs:
           bash -n packaging/linux/package.sh
           bash packaging/linux/package.sh
 
-      - name: Upload Linux preview distributions
+      - name: Upload Linux AppImage preview
         if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v7
         with:
-          name: goampp-preview-linux-distributions
-          path: |
-            dist/packages/goampp-dev-linux-amd64.tar.gz
-            dist/packages/goampp-dev-linux-amd64.AppImage
-            dist/packages/goampp-dev-linux-amd64.deb
-            dist/packages/goampp-dev-linux-amd64.rpm
+          name: goampp-preview-linux-appimage
+          path: dist/packages/goampp-dev-linux-amd64.AppImage
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload Linux Debian package preview
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: goampp-preview-linux-deb
+          path: dist/packages/goampp-dev-linux-amd64.deb
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload Linux RPM package preview
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: goampp-preview-linux-rpm
+          path: dist/packages/goampp-dev-linux-amd64.rpm
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload Linux portable archive preview
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: goampp-preview-linux-tar-gz
+          path: dist/packages/goampp-dev-linux-amd64.tar.gz
           if-no-files-found: error
           retention-days: 7
