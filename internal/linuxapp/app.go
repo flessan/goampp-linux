@@ -20,6 +20,7 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
@@ -93,6 +94,22 @@ func Run() {
 	w := a.NewWindow("GoAMPP for Linux")
 	w.Resize(fyne.NewSize(1120, 760))
 	w.CenterOnScreen()
+
+	desktopApp, trayAvailable := a.(desktop.App)
+	if trayAvailable {
+		if logo := linuxLogoResource(); logo != nil {
+			desktopApp.SetSystemTrayIcon(logo)
+		}
+		desktopApp.SetSystemTrayMenu(fyne.NewMenu("GoAMPP",
+			fyne.NewMenuItem("Show GoAMPP", func() {
+				fyne.Do(func() { w.Show() })
+			}),
+			fyne.NewMenuItem("Quit GoAMPP", func() {
+				stopAllProjects()
+				a.Quit()
+			}),
+		))
+	}
 
 	projectDir := projectDirectory()
 	_ = os.MkdirAll(projectDir, 0o755)
@@ -445,7 +462,32 @@ func Run() {
 		container.NewCenter(themeControl.obj),
 	))
 
+	var trayPreference fyne.CanvasObject
+	if trayAvailable {
+		closeToTray := widget.NewCheck("Keep GoAMPP running in the system tray when the window closes", func(enabled bool) {
+			a.Preferences().SetBool("close-to-tray", enabled)
+			if enabled {
+				linuxSetStatus("Closing the window will keep GoAMPP in the system tray")
+			} else {
+				linuxSetStatus("Closing the window will quit GoAMPP")
+			}
+		})
+		closeToTray.SetChecked(a.Preferences().BoolWithFallback("close-to-tray", false))
+		trayPreference = linuxSurface(container.NewVBox(
+			linuxBoldText("Window behavior", 13),
+			closeToTray,
+			linuxMutedText("The system-tray menu can reopen or quit the application.", 11.5),
+		), 8, 8, 12, 12)
+	} else {
+		trayPreference = linuxSurface(container.NewVBox(
+			linuxBoldText("Window behavior", 13),
+			widget.NewLabel("Your current Linux desktop driver does not expose a system-tray integration."),
+		), 8, 8, 12, 12)
+	}
+
 	settingsPage := container.NewVScroll(linuxPad(container.NewVBox(
+		linuxSectionLabel("BEHAVIOR"),
+		trayPreference,
 		linuxSectionLabel("APPEARANCE"),
 		linuxSurface(appearanceRow, 2, 2, 2, 2),
 		linuxSectionLabel("PATHS"),
@@ -512,6 +554,12 @@ func Run() {
 	linuxAddLog("GoAMPP for Linux started")
 	refreshServices()
 	w.SetCloseIntercept(func() {
+		if trayAvailable && a.Preferences().BoolWithFallback("close-to-tray", false) {
+			w.Hide()
+			linuxSetStatus("GoAMPP is running in the system tray")
+			linuxAddLog("Main window hidden to system tray")
+			return
+		}
 		stopAllProjects()
 		a.Quit()
 	})
