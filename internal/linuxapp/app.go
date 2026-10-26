@@ -68,7 +68,8 @@ var toolDefinitions = []toolDefinition{
 
 func Run() {
 	a := app.NewWithID("cc.thio.goampp.linux")
-	a.Settings().SetTheme(newLinuxGoamppTheme())
+	themePreference := a.Preferences().StringWithFallback("theme", "System")
+	a.Settings().SetTheme(newLinuxGoamppTheme(themePreference))
 	if logo := linuxLogoResource(); logo != nil {
 		a.SetIcon(logo)
 	}
@@ -360,12 +361,33 @@ func Run() {
 	), 0, 12, 0, 0))
 	refreshProjects()
 
+	themes := []string{"System", "Light", "Dark"}
+	themeControl := newLinuxSegmented(themes, func(index int) {
+		preference := themes[index]
+		a.Preferences().SetString("theme", preference)
+		a.Settings().SetTheme(newLinuxGoamppTheme(preference))
+		refreshLinuxThemeSurfaces()
+		linuxSetStatus("Theme set to " + preference)
+		linuxAddLog("Appearance theme changed to " + preference)
+	})
+	for i, preference := range themes {
+		if preference == themePreference {
+			themeControl.setSelected(i, false)
+			break
+		}
+	}
+	appearanceRow := container.New(layout.NewCustomPaddedLayout(8, 8, 12, 8), container.NewBorder(
+		nil, nil,
+		container.NewVBox(
+			widget.NewLabelWithStyle("Theme", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+			widget.NewLabel("System follows your Linux desktop appearance."),
+		),
+		container.NewCenter(themeControl.obj),
+	))
+
 	settingsPage := container.NewVScroll(linuxPad(container.NewVBox(
 		linuxSectionLabel("APPEARANCE"),
-		linuxSurface(container.NewVBox(
-			widget.NewLabelWithStyle("Theme", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-			widget.NewLabel("GoAMPP uses the same neutral surface palette as the Windows UI and follows the active Fyne desktop theme variant."),
-		), 10, 10, 12, 12),
+		linuxSurface(appearanceRow, 2, 2, 2, 2),
 		linuxSectionLabel("PATHS"),
 		linuxSurface(container.NewVBox(
 			widget.NewLabelWithStyle("Project workspace", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
