@@ -39,8 +39,11 @@ func TestServiceCommand(t *testing.T) {
 		args    []string
 	}{
 		{"systemd", "nginx", "start", "systemctl", []string{"start", "nginx"}},
+		{"systemd", "nginx", "restart", "systemctl", []string{"restart", "nginx"}},
 		{"openrc", "nginx", "start", "rc-service", []string{"nginx", "start"}},
+		{"openrc", "nginx", "restart", "rc-service", []string{"nginx", "restart"}},
 		{"sysvinit", "nginx", "stop", "service", []string{"nginx", "stop"}},
+		{"sysvinit", "nginx", "restart", "service", []string{"nginx", "restart"}},
 		{"systemd", "php8.4-fpm", "status", "systemctl", []string{"status", "php8.4-fpm"}},
 	}
 	for _, test := range tests {
