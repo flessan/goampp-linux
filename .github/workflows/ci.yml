@@ -99,23 +99,33 @@ jobs:
 
       - name: Build native Linux binary
         run: |
-          mkdir -p dist
-          go build -trimpath -o dist/goampp-linux .
+          mkdir -p dist/linux
+          go build -trimpath -o dist/linux/goampp-linux .
 
-      - name: Package Linux preview archive
+      - name: Install Linux packaging tools
         if: github.event_name == 'pull_request'
         run: |
-          mkdir -p dist/linux
-          cp dist/goampp-linux README.md packaging/linux/goampp.desktop packaging/linux/install.sh packaging/linux/uninstall.sh dist/linux/
-          cp assets/logo.png dist/linux/logo.png
-          chmod +x dist/linux/install.sh dist/linux/uninstall.sh
-          tar -czf goampp-preview-linux-amd64.tar.gz -C dist/linux goampp-linux README.md goampp.desktop install.sh uninstall.sh logo.png
+          sudo apt-get install -y file desktop-file-utils patchelf
+          go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.41.3
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
-      - name: Upload Linux preview artifact
+      - name: Package Linux distributions
+        if: github.event_name == 'pull_request'
+        env:
+          VERSION: dev
+        run: |
+          bash -n packaging/linux/package.sh
+          bash packaging/linux/package.sh
+
+      - name: Upload Linux preview distributions
         if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v7
         with:
-          name: goampp-preview-linux-amd64
-          path: goampp-preview-linux-amd64.tar.gz
+          name: goampp-preview-linux-distributions
+          path: |
+            dist/packages/goampp-dev-linux-amd64.tar.gz
+            dist/packages/goampp-dev-linux-amd64.AppImage
+            dist/packages/goampp-dev-linux-amd64.deb
+            dist/packages/goampp-dev-linux-amd64.rpm
           if-no-files-found: error
           retention-days: 7
