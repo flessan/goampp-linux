@@ -51,7 +51,7 @@ func TestLinuxPackageMappingsCoverCoreServicesAndRuntimes(t *testing.T) {
 			t.Errorf("service package mapping missing for %q", name)
 		}
 	}
-	for _, name := range []string{"PHP", "Composer", "Node.js", "npm", "Python", "Go", "Java", "Rust", "Cargo", "Ruby", "Bundler", "Elixir", "Erlang", "Maven", "Gradle", "CMake", "GCC", "Perl", "SQLite", "Git", "Docker CLI"} {
+	for _, name := range []string{"PHP", "Composer", "Node.js", "npm", "Python", "Go", "Java", "Rust", "Cargo", "Ruby", "Bundler", "Elixir", "Erlang", "Maven", "Gradle", "CMake", "GCC", "Perl", "SQLite", "Git", "Docker CLI", "PostgreSQL client"} {
 		packages, ok := linuxToolPackages[name]
 		if !ok {
 			t.Errorf("tool package mapping missing for %q", name)
