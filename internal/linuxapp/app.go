@@ -550,7 +550,10 @@ func makeServiceCard(w fyne.Window, state serviceState, refresh func()) fyne.Can
 			action.Disable()
 		}
 	}
-	header := container.NewBorder(nil, nil, heading, action, linuxGap(1))
+	moreButton := widget.NewButtonWithIcon("More", theme.MoreHorizontalIcon(), func() {
+		showLinuxServiceActions(w, state, refresh)
+	})
+	header := container.NewBorder(nil, nil, heading, container.NewHBox(action, moreButton), linuxGap(1))
 	details := linuxPad(detailLabel, 0, 0, 48, 0)
 	return linuxSurface(container.NewVBox(header, details), 10, 10, 12, 12)
 }
@@ -637,6 +640,8 @@ func runServiceAction(w fyne.Window, action *widget.Button, manager, unit, verb 
 		action.SetText("Starting…")
 	case "stop":
 		action.SetText("Stopping…")
+	case "restart":
+		action.SetText("Restarting…")
 	}
 	go func() {
 		err := controlUnit(manager, unit, verb)
