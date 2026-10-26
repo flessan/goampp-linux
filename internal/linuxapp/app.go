@@ -418,9 +418,9 @@ func Run() {
 	pages := []*linuxPage{
 		{key: "services", title: "Services", icon: theme.ComputerIcon(), actions: refreshButton, body: servicePage},
 		{key: "projects", title: "Projects", icon: theme.FolderIcon(), actions: projectActions, body: projectsPage},
-		{key: "vhosts", title: "Virtual Hosts", icon: theme.HomeIcon(), body: linuxInfoPage("Virtual Hosts", "The Windows version can edit Apache/Nginx virtual hosts and update the hosts file. This Linux feature has not been ported yet, so GoAMPP will not edit your system configuration here.", theme.HomeIcon())},
-		{key: "editor", title: "Config Editor", icon: theme.DocumentCreateIcon(), body: linuxInfoPage("Config Editor", "The Windows configuration editor is not available in the initial Linux mode. Open configuration files with your desktop editor or file manager.", theme.DocumentCreateIcon())},
-		{key: "startup", title: "Startup", icon: theme.MediaPlayIcon(), body: linuxInfoPage("Startup", "Automatic service startup profiles from Windows have not been ported yet. Services can still be started and stopped from the Services page when your account is authorized.", theme.MediaPlayIcon())},
+		{key: "vhosts", title: "Virtual Hosts", icon: theme.HomeIcon(), body: buildLinuxVHostsPage(w, projectDir)},
+		{key: "editor", title: "Config Editor", icon: theme.DocumentCreateIcon(), body: buildLinuxConfigEditorPage(w)},
+		{key: "startup", title: "Startup", icon: theme.MediaPlayIcon(), body: buildLinuxStartupPage(w)},
 		{key: "settings", title: "Settings", icon: theme.SettingsIcon(), body: settingsPage},
 	}
 	attachLinuxShell(a, w, pages, "services")
