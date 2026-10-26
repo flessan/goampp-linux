@@ -194,3 +194,49 @@ func linuxPageIntro(title, subtitle string, icon fyne.Resource) fyne.CanvasObjec
 	)
 	return linuxSurface(container.NewHBox(iconView, linuxHGap(12), heading), 10, 10, 12, 12)
 }
+
+
+type linuxSegmented struct {
+	buttons  []*widget.Button
+	selected int
+	onChange func(int)
+	obj      fyne.CanvasObject
+}
+
+func newLinuxSegmented(options []string, onChange func(int)) *linuxSegmented {
+	s := &linuxSegmented{onChange: onChange}
+	row := container.NewHBox()
+	for i, option := range options {
+		index := i
+		button := widget.NewButton(option, func() { s.setSelected(index, true) })
+		s.buttons = append(s.buttons, button)
+		row.Add(button)
+	}
+	bg := canvas.NewRectangle(theme.Color(theme.ColorNameInputBackground))
+	bg.CornerRadius = 6
+	bg.StrokeColor = theme.Color(theme.ColorNameSeparator)
+	bg.StrokeWidth = 1
+	s.obj = container.NewStack(bg, container.New(layout.NewCustomPaddedLayout(2, 2, 2, 2), row))
+	if len(options) > 0 {
+		s.setSelected(0, false)
+	}
+	return s
+}
+
+func (s *linuxSegmented) setSelected(index int, notify bool) {
+	if index < 0 || index >= len(s.buttons) {
+		return
+	}
+	s.selected = index
+	for i, button := range s.buttons {
+		if i == index {
+			button.Importance = widget.MediumImportance
+		} else {
+			button.Importance = widget.LowImportance
+		}
+		button.Refresh()
+	}
+	if notify && s.onChange != nil {
+		s.onChange(index)
+	}
+}
