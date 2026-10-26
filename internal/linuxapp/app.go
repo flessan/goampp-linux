@@ -188,7 +188,7 @@ func Run() {
 				if len(states) > 0 && states[0].Manager == "" {
 					serviceStatus.SetText(fmt.Sprintf("No supported service manager detected. %d service types can still be inspected, but service controls are unavailable.", len(states)))
 				} else {
-					serviceStatus.SetText(fmt.Sprintf("Showing %d service types and %d developer tools. GoAMPP never changes system packages without your action.", len(states), len(toolDefinitions)))
+					serviceStatus.SetText(fmt.Sprintf("Showing %d service types and %d developer-tool entries. Installed runtimes are detected from PATH; GoAMPP never changes system packages without your action.", len(states), len(toolDefinitions)))
 				}
 				if refreshButton != nil {
 					refreshButton.Enable()
