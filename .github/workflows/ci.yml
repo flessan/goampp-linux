@@ -107,7 +107,7 @@ jobs:
       - name: Install Linux packaging tools
         if: github.event_name == 'pull_request'
         run: |
-          sudo apt-get install -y file desktop-file-utils patchelf
+          sudo apt-get install -y file desktop-file-utils patchelf imagemagick
           go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.41.3
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
 
