@@ -86,8 +86,15 @@ func validLinuxDocumentRootPath(path string) bool {
 	}
 	for _, r := range path {
 		// Control characters can inject additional server directives. Dollar
-		// signs trigger server-variable expansion in both Apache and Nginx.
-		if r < 0x20 || r == 0x7f || r == '
+		// signs trigger server-variable expansion in Apache and Nginx.
+		if r < 0x20 || r == 0x7f || r == 36 {
+			return false
+		}
+	}
+	return true
+}
+
+func linuxHostConfig(host linuxVHost) string {
 	root := strings.ReplaceAll(host.DocumentRoot, "\\", "\\\\")
 	root = strings.ReplaceAll(root, "\"", "\\\"")
 	port := host.Port
