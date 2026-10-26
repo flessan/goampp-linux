@@ -13,7 +13,6 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
@@ -232,7 +231,7 @@ func buildLinuxConfigEditorPage(w fyne.Window) fyne.CanvasObject {
 		}
 		loadPath(currentPath)
 	})
-	openExternalButton := widget.NewButtonWithIcon("External editor", theme.LaunchIcon(), func() {
+	openExternalButton := widget.NewButtonWithIcon("External editor", theme.FolderOpenIcon(), func() {
 		if currentPath == "" {
 			return
 		}
