@@ -301,69 +301,108 @@ func Run() {
 		}),
 		widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), refreshProjects),
 	)
-	workspaceCard := linuxSurface(container.NewVBox(
-		widget.NewLabelWithStyle("Project workspace", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		rootLabel,
-		projectActions,
-	), 10, 10, 12, 12)
 	createCard := linuxSurface(container.NewVBox(
-		widget.NewLabelWithStyle("Create a new project", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		linuxGap(8),
-		container.NewGridWithColumns(2,
-			widget.NewLabel("Project name"), projectNameEntry,
-			widget.NewLabel("Starter template"), templateSelect,
+		container.NewVBox(
+			widget.NewLabelWithStyle("New project", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+			widget.NewLabel("Create a safe starter in your local GoAMPP workspace."),
 		),
-		linuxGap(4),
+		linuxVSpace(8),
+		container.New(layout.NewFormLayout(),
+			widget.NewLabel("Name"), projectNameEntry,
+			widget.NewLabel("Template"), templateSelect,
+		),
+		linuxVSpace(4),
 		templateDescription,
-		linuxGap(8),
-		createButton,
-		projectStatus,
+		linuxVSpace(8),
+		container.NewBorder(nil, nil, nil, createButton, projectStatus),
+	), 10, 10, 12, 12)
+	projectsCard := linuxSurface(container.NewVBox(
+		container.NewBorder(nil, nil,
+			container.NewVBox(
+				widget.NewLabelWithStyle("Your projects", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+				widget.NewLabel("Run a starter, inspect its log, or open its folder."),
+			),
+			nil,
+			linuxVSpace(1),
+		),
+		linuxVSpace(8),
+		projectList,
 	), 10, 10, 12, 12)
 	installCard := linuxSurface(container.NewVBox(
 		widget.NewLabelWithStyle("System packages", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		widget.NewLabel("Install web servers, databases, and runtimes with your distribution's package manager. GoAMPP never installs system packages automatically."),
-		widget.NewButton("Show installation command", func() {
+		widget.NewLabel("GoAMPP uses packages managed by your distribution and never silently installs system services."),
+		widget.NewButtonWithIcon("Show package command", theme.TerminalIcon(), func() {
 			command := suggestedInstallCommand()
 			entry := widget.NewEntry()
 			entry.SetText(command)
 			entry.MultiLine = true
 			entry.Wrapping = fyne.TextWrapBreak
-			copyButton := widget.NewButton("Copy command", func() {
+			copyButton := widget.NewButtonWithIcon("Copy command", theme.ContentCopyIcon(), func() {
 				w.Clipboard().SetContent(entry.Text)
+				linuxAddLog("Package command copied")
 				dialog.ShowInformation("Copied", "Installation command copied to clipboard.", w)
 			})
 			dialog.ShowCustom("Native package command", "Close", container.NewVBox(entry, copyButton), w)
 		}),
 	), 10, 10, 12, 12)
-	projectHeader := container.NewVBox(
-		linuxPageIntro("Projects", "Create, run, and inspect local development starters.", theme.FolderIcon()),
-		linuxGap(10),
-		workspaceCard,
-		linuxGap(10),
+	projectsPage := container.NewVScroll(linuxPad(container.NewVBox(
 		createCard,
-		linuxGap(10),
+		linuxVSpace(8),
+		projectsCard,
+		linuxVSpace(8),
 		installCard,
-		linuxGap(12),
-		linuxPageIntro("Your projects", "Run a starter, inspect its logs, or open its folder.", theme.FolderOpenIcon()),
-		linuxGap(6),
-		linuxPad(projectList, 2, 10, 2, 2),
-	)
-	projectsPage := container.NewVScroll(linuxPad(projectHeader, 8, 12, 14, 14))
+	), 0, 12, 0, 0))
 	refreshProjects()
 
-	tabs := container.NewAppTabs(
-		container.NewTabItem("Services", servicePage),
-		container.NewTabItem("Developer tools", toolsPage),
-		container.NewTabItem("Projects", container.NewPadded(projectsPage)),
-	)
-	w.SetContent(container.NewBorder(
-		linuxPad(top, 10, 4, 18, 18),
-		nil, nil, nil,
-		linuxPad(tabs, 0, 12, 18, 18),
-	))
+	settingsPage := container.NewVScroll(linuxPad(container.NewVBox(
+		linuxSectionLabel("APPEARANCE"),
+		linuxSurface(container.NewVBox(
+			widget.NewLabelWithStyle("Theme", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+			widget.NewLabel("GoAMPP uses the same neutral surface palette as the Windows UI and follows the active Fyne desktop theme variant."),
+		), 10, 10, 12, 12),
+		linuxSectionLabel("PATHS"),
+		linuxSurface(container.NewVBox(
+			widget.NewLabelWithStyle("Project workspace", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+			rootLabel,
+			widget.NewButtonWithIcon("Open workspace", theme.FolderOpenIcon(), func() {
+				if err := openExternal(projectDir); err != nil {
+					dialog.ShowError(err, w)
+				}
+			}),
+		), 10, 10, 12, 12),
+		linuxSectionLabel("TOOLS"),
+		linuxSurface(container.NewVBox(
+			widget.NewLabelWithStyle("System package manager", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+			widget.NewLabel("Service installation and system changes remain explicit user actions."),
+			widget.NewButtonWithIcon("Copy suggested install command", theme.ContentCopyIcon(), func() {
+				w.Clipboard().SetContent(suggestedInstallCommand())
+				linuxAddLog("Suggested package command copied")
+				dialog.ShowInformation("Copied", "Installation command copied to clipboard.", w)
+			}),
+		), 10, 10, 12, 12),
+		linuxSectionLabel("ABOUT"),
+		linuxSurface(container.NewHBox(
+			linuxImage(linuxLogoResource(), 40, "GoAMPP"),
+			linuxHSpace(12),
+			container.NewVBox(
+				linuxBoldText("GoAMPP for Linux", 13),
+				linuxMutedText("Native desktop panel for distribution-managed services.", 11.5),
+				linuxMutedText("Early Linux mode · Windows feature parity is still in progress.", 10.5),
+			),
+		), 10, 10, 12, 12),
+	), 8, 12, 14, 14))
 
+	pages := []*linuxPage{
+		{key: "services", title: "Services", icon: theme.ComputerIcon(), actions: refreshButton, body: servicePage},
+		{key: "projects", title: "Projects", icon: theme.FolderIcon(), actions: projectActions, body: projectsPage},
+		{key: "vhosts", title: "Virtual Hosts", icon: theme.HomeIcon(), body: linuxInfoPage("Virtual Hosts", "The Windows version can edit Apache/Nginx virtual hosts and update the hosts file. This Linux feature has not been ported yet, so GoAMPP will not edit your system configuration here.", theme.HomeIcon())},
+		{key: "editor", title: "Config Editor", icon: theme.DocumentCreateIcon(), body: linuxInfoPage("Config Editor", "The Windows configuration editor is not available in the initial Linux mode. Open configuration files with your desktop editor or file manager.", theme.DocumentCreateIcon())},
+		{key: "startup", title: "Startup", icon: theme.MediaPlayIcon(), body: linuxInfoPage("Startup", "Automatic service startup profiles from Windows have not been ported yet. Services can still be started and stopped from the Services page when your account is authorized.", theme.MediaPlayIcon())},
+		{key: "settings", title: "Settings", icon: theme.SettingsIcon(), body: settingsPage},
+	}
+	attachLinuxShell(a, w, pages, "services")
+	linuxAddLog("GoAMPP for Linux started")
 	refreshServices()
-	refreshTools()
 	w.SetCloseIntercept(func() {
 		stopAllProjects()
 		a.Quit()
