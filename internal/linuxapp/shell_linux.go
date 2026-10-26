@@ -455,13 +455,10 @@ func linuxRecolorObject(obj fyne.CanvasObject) {
 	case *canvas.Rectangle:
 		item.FillColor = linuxRecolorColor(item.FillColor, "surface")
 		item.StrokeColor = linuxRecolorColor(item.StrokeColor, "surface")
-		item.Refresh()
 	case *canvas.Text:
 		item.Color = linuxRecolorColor(item.Color, "text")
-		item.Refresh()
 	case *canvas.Circle:
 		item.FillColor = linuxRecolorColor(item.FillColor, "accent")
-		item.Refresh()
 	case *fyne.Container:
 		for _, child := range item.Objects {
 			linuxRecolorObject(child)
