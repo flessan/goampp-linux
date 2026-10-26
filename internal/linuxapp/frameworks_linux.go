@@ -111,12 +111,21 @@ func createLinuxFrameworkProject(root, name string, recipe linuxFrameworkRecipe,
 		return "", fmt.Errorf("create project directory: %w", err)
 	}
 	log("Preparing " + recipe.Name + " in " + target)
-	logPath := filepath.Join(target, ".goampp-run.log")
-	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+	// Keep the generation log outside the target while upstream generators run.
+	// Some CLIs require that a freshly-created project directory is completely empty.
+	logFile, err := os.CreateTemp(rootAbs, ".goampp-framework-*.log")
 	if err != nil {
-		return target, fmt.Errorf("create project log: %w", err)
+		return target, fmt.Errorf("create temporary project log: %w", err)
 	}
-	defer logFile.Close()
+	tempLogPath := logFile.Name()
+	defer func() {
+		_ = logFile.Sync()
+		_ = logFile.Close()
+		logPath := filepath.Join(target, ".goampp-run.log")
+		if err := os.Rename(tempLogPath, logPath); err != nil {
+			_ = os.Remove(tempLogPath)
+		}
+	}()
 	logOutput := &linuxFrameworkLogWriter{file: logFile, onLine: log}
 	for _, required := range recipe.Required {
 		if _, err := exec.LookPath(required); err != nil {
@@ -257,9 +266,14 @@ func downloadLinuxFrameworkZip(rawURL, root, stripTop string, log func(string)) 
 		}
 		if stripTop != "" {
 			prefix := filepath.Clean(filepath.FromSlash(strings.TrimSuffix(stripTop, "/")))
-			if entry == prefix { continue }
-			if !strings.HasPrefix(entry, prefix+string(os.PathSeparator)) { continue }
-			entry = strings.TrimPrefix(strings.TrimPrefix(entry, prefix), string(os.PathSeparator))
+			if entry == prefix {
+				continue
+			}
+			// Archives may place files either at the root or inside a named
+			// directory. Strip the wrapper only when the entry has that prefix.
+			if strings.HasPrefix(entry, prefix+string(os.PathSeparator)) {
+				entry = strings.TrimPrefix(strings.TrimPrefix(entry, prefix), string(os.PathSeparator))
+			}
 		}
 		if entry == "." || entry == "" { continue }
 		if extracted > 100000 { return fmt.Errorf("framework archive contains too many files") }
