@@ -36,6 +36,21 @@ func TestLinuxPackageCommandUsesDistributionSyntax(t *testing.T) {
 	}
 }
 
+func TestShellQuoteLinuxArgPreservesLiteralArguments(t *testing.T) {
+	tests := []struct{ input, want string }{
+		{"sudo", "'sudo'"},
+		{"php-fpm", "'php-fpm'"},
+		{"name with spaces", "'name with spaces'"},
+		{"$(touch nope)", "'$(touch nope)'"},
+		{"can't", "'can'\\''t'"},
+	}
+	for _, test := range tests {
+		if got := shellQuoteLinuxArg(test.input); got != test.want {
+			t.Errorf("shellQuoteLinuxArg(%q) = %q, want %q", test.input, got, test.want)
+		}
+	}
+}
+
 func TestLinuxPackageCommandRejectsMissingMapping(t *testing.T) {
 	if _, err := linuxPackageCommand("apt", linuxPackageNames{}); err == nil {
 		t.Fatal("missing package mapping should return an error")
