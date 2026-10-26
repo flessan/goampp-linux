@@ -79,6 +79,25 @@ func projectTemplateNames() []string {
 	return names
 }
 
+func projectCreationOptions() []string {
+	names := projectTemplateNames()
+	names = append(names, linuxFrameworkNames()...)
+	return names
+}
+
+func projectCreationDescription(name string) string {
+	if item, ok := projectTemplateByName(name); ok {
+		return item.Description
+	}
+	if recipe, ok := linuxFrameworkByName(name); ok {
+		if len(recipe.Required) == 0 {
+			return recipe.Description
+		}
+		return recipe.Description + " Requires: " + strings.Join(recipe.Required, ", ") + ". Project creation runs in the background and records output in Logs."
+	}
+	return "Choose a starter project."
+}
+
 func projectTemplateByName(name string) (projectTemplate, bool) {
 	for _, item := range projectTemplates {
 		if item.Name == name {
