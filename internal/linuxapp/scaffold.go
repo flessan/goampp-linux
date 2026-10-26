@@ -89,6 +89,17 @@ func projectTemplateByName(name string) (projectTemplate, bool) {
 }
 
 func createProject(root, name, templateName string) (string, error) {
+	return createProjectWithLog(root, name, templateName, nil)
+}
+
+func createProjectWithLog(root, name, templateName string, log func(string)) (string, error) {
+	if recipe, ok := linuxFrameworkByName(templateName); ok {
+		return createLinuxFrameworkProject(root, name, recipe, log)
+	}
+	return createBuiltinProject(root, name, templateName)
+}
+
+func createBuiltinProject(root, name, templateName string) (string, error) {
 	name = strings.TrimSpace(name)
 	if !projectNamePattern.MatchString(name) {
 		return "", fmt.Errorf("use 1–48 letters, numbers, underscores, or hyphens; the first character must be a letter or number")
