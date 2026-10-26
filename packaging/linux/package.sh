@@ -41,8 +41,9 @@ sed "s/@VERSION@/$PACKAGE_VERSION/g" "$ROOT/packaging/linux/nfpm.yaml.in" > "$CO
 
 # AppImage uses linuxdeploy to bundle non-system shared libraries. The host's
 # display server and graphics driver remain host-provided, as required by GUI apps.
-LINUXDEPLOY="${LINUXDEPLOY:-$OUT/linuxdeploy-x86_64.AppImage}"
+LINUXDEPLOY="${LINUXDEPLOY:-$OUT/.tools/linuxdeploy-x86_64.AppImage}"
 if [[ ! -x "$LINUXDEPLOY" ]]; then
+  mkdir -p "$(dirname -- "$LINUXDEPLOY")"
   curl -fsSL --retry 3 \
     https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage \
     -o "$LINUXDEPLOY"
@@ -64,7 +65,7 @@ chmod 0755 "$APPDIR/AppRun"
 
 (
   cd "$OUT"
-  rm -f ./*.AppImage
+  rm -f "$OUT/GoAMPP-x86_64.AppImage" "$OUT/goampp-$VERSION-linux-amd64.AppImage"
   APPIMAGE_EXTRACT_AND_RUN=1 ARCH=x86_64 "$LINUXDEPLOY" \
     --appdir "$APPDIR" \
     --executable "$APPDIR/usr/bin/goampp" \
