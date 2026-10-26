@@ -66,7 +66,7 @@ func TestServiceCommandRejectsInvalidInput(t *testing.T) {
 		action  string
 	}{
 		{"systemd", "", "start"},
-		{"systemd", "nginx", "restart"},
+		{"systemd", "nginx", "enable"},
 		{"unknown", "nginx", "start"},
 	} {
 		if _, _, err := serviceCommand(test.manager, test.unit, test.action); err == nil {
