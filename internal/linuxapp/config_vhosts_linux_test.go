@@ -22,6 +22,19 @@ func TestValidLinuxHostDomain(t *testing.T) {
 	}
 }
 
+func TestValidLinuxDocumentRootPath(t *testing.T) {
+	for _, path := range []string{"/home/user/GoAMPP/www/demo/public", "/srv/www/café", "/var/www/app-v2"} {
+		if !validLinuxDocumentRootPath(path) {
+			t.Errorf("expected document root %q to be valid", path)
+		}
+	}
+	for _, path := range []string{"", "  ", "/srv/www/demo\nserver {", "/srv/www/$HOME", "/srv/www/with\x00nul"} {
+		if validLinuxDocumentRootPath(path) {
+			t.Errorf("expected document root %q to be rejected", path)
+		}
+	}
+}
+
 func TestLinuxHostConfigGeneratesApacheAndNginx(t *testing.T) {
 	host := linuxVHost{Domain: "demo.test", DocumentRoot: "/home/test/GoAMPP/www/demo/public", Port: 8088, Server: "both", Enabled: true}
 	config := linuxHostConfig(host)
