@@ -174,6 +174,7 @@ func Run() {
 
 	serviceSearch.OnChanged = func(string) { renderServiceList(cachedServices) }
 	refreshServices = func() {
+		linuxResetToolVersionCache()
 		serviceStatus.SetText("Checking installed services...")
 		linuxSetStatus("Refreshing installed services")
 		if refreshButton != nil {
@@ -662,23 +663,11 @@ func makeToolCard(w fyne.Window, tool toolDefinition) fyne.CanvasObject {
 	statusLabel := widget.NewLabel(status)
 	statusLabel.Wrapping = fyne.TextWrapBreak
 	if binary != "" && len(tool.Arguments) > 0 {
-		go func(binary string, args []string, label *widget.Label) {
-			output, err := runCommandWithTimeout(2*time.Second, binary, args...)
-			if err != nil {
-				return
-			}
-			for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
-				line = strings.TrimSpace(line)
-				if line == "" {
-					continue
-				}
-				version := line
-				fyne.Do(func() {
-					label.SetText(binary + " · " + version)
-				})
-				return
-			}
-		}(binary, append([]string(nil), tool.Arguments...), statusLabel)
+		if version, ok := linuxCachedToolVersion(tool.Name); ok {
+			statusLabel.SetText(binary + " · " + version)
+		} else {
+			linuxRequestToolVersion(tool.Name, binary, append([]string(nil), tool.Arguments...), statusLabel)
+		}
 	}
 	title := widget.NewLabelWithStyle(tool.Name, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
 	details := container.NewVBox(title, statusLabel)
