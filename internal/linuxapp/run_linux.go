@@ -63,27 +63,147 @@ func availableLocalPort() (int, error) {
 func projectRunSpecAtPort(spec projectRunSpec, port int) projectRunSpec {
 	spec.Port = port
 	spec.URL = fmt.Sprintf("http://127.0.0.1:%d", port)
-	if spec.PortMode == "php" {
-		spec.Args = []string{"-S", fmt.Sprintf("127.0.0.1:%d", port), "-t", "public", "router.php"}
+	addr := fmt.Sprintf("127.0.0.1:%d", port)
+	switch spec.PortMode {
+	case "php":
+		spec.Args = []string{"-S", addr, "-t", "public", "router.php"}
+	case "framework:laravel", "framework:livewire":
+		spec.Args = []string{"artisan", "serve", "--host", "127.0.0.1", "--port", strconv.Itoa(port)}
+	case "framework:symfony":
+		spec.Args = []string{"-S", addr, "-t", "public", "public/index.php"}
+	case "framework:codeigniter":
+		spec.Args = []string{"spark", "serve", "--host", "127.0.0.1", "--port", strconv.Itoa(port)}
+	case "framework:wordpress":
+		spec.Args = []string{"-S", addr, "-t", ".", ".goampp-router.php"}
+	case "framework:nextjs":
+		spec.Args = []string{"run", "dev", "--", "--hostname", "127.0.0.1", "--port", strconv.Itoa(port)}
+	case "framework:vite":
+		spec.Args = []string{"run", "dev", "--", "--host", "127.0.0.1", "--port", strconv.Itoa(port), "--strictPort"}
+	case "framework:django":
+		spec.Args = []string{"manage.py", "runserver", addr}
+	case "framework:fastapi":
+		spec.Args = []string{"-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", strconv.Itoa(port)}
+	case "framework:springboot":
+		spec.Args = []string{"mvnw", "spring-boot:run", "-Dspring-boot.run.arguments=--server.address=127.0.0.1,--server.port=" + strconv.Itoa(port)}
 	}
 	return spec
 }
 
+func frameworkProjectRunSpec(dir, name string) (projectRunSpec, error) {
+	spec := projectRunSpec{URL: "http://127.0.0.1:0", PortMode: "framework:"}
+	switch strings.TrimSpace(name) {
+	case "Laravel":
+		spec.Command, spec.PortMode = "php", "framework:laravel"
+	case "Laravel + Livewire":
+		spec.Command, spec.PortMode = "php", "framework:livewire"
+	case "Symfony":
+		spec.Command, spec.PortMode = "php", "framework:symfony"
+	case "CodeIgniter 4":
+		spec.Command, spec.PortMode = "php", "framework:codeigniter"
+	case "WordPress":
+		spec.Command, spec.PortMode = "php", "framework:wordpress"
+	case "Next.js":
+		spec.Command, spec.PortMode = "npm", "framework:nextjs"
+	case "Vite + React":
+		spec.Command, spec.PortMode = "npm", "framework:vite"
+	case "Express":
+		spec.Command, spec.Args, spec.PortMode = "node", []string{"index.js"}, "framework:express"
+	case "NestJS":
+		spec.Command, spec.Args, spec.PortMode = "npm", []string{"run", "start:dev"}, "framework:nestjs"
+	case "AdonisJS":
+		spec.Command, spec.Args, spec.PortMode = "npm", []string{"run", "dev"}, "framework:adonis"
+	case "Flask":
+		spec.Command, spec.Args, spec.PortMode = filepath.Join(dir, ".venv", "bin", "python"), []string{"app.py"}, "framework:flask"
+	case "Django":
+		spec.Command, spec.PortMode = filepath.Join(dir, ".venv", "bin", "python"), "framework:django"
+	case "FastAPI":
+		spec.Command, spec.PortMode = filepath.Join(dir, ".venv", "bin", "python"), "framework:fastapi"
+	case "Go HTTP server", "Gin (Go)":
+		spec.Command, spec.Args, spec.PortMode = "go", []string{"run", "."}, "framework:go"
+	case "Spring Boot":
+		spec.Command, spec.PortMode = "sh", "framework:springboot"
+	default:
+		return projectRunSpec{}, fmt.Errorf("no supported runner is registered for framework %q", name)
+	}
+	switch spec.PortMode {
+	case "framework:express":
+		spec.URL = "http://127.0.0.1:3000"
+	case "framework:nestjs":
+		spec.URL = "http://127.0.0.1:3000"
+	case "framework:adonis":
+		spec.URL = "http://127.0.0.1:3333"
+	case "framework:laravel", "framework:livewire", "framework:symfony", "framework:codeigniter", "framework:wordpress":
+		spec.URL = "http://127.0.0.1:8000"
+	case "framework:nextjs", "framework:vite":
+		spec.URL = "http://127.0.0.1:3000"
+	case "framework:django", "framework:fastapi":
+		spec.URL = "http://127.0.0.1:8000"
+	case "framework:go":
+		spec.URL = "http://127.0.0.1:8080"
+	case "framework:springboot":
+		spec.URL = "http://127.0.0.1:8080"
+	}
+	return spec, nil
+}
+
 func environmentWith(key, value string) []string {
-	prefix := key + "="
-	out := make([]string, 0, len(os.Environ())+1)
-	for _, item := range os.Environ() {
-		if !strings.HasPrefix(item, prefix) {
+	return environmentWithValues(map[string]string{key: value})
+}
+
+func environmentWithValues(values map[string]string) []string {
+	current := os.Environ()
+	out := make([]string, 0, len(current)+len(values))
+	for _, item := range current {
+		key, _, _ := strings.Cut(item, "=")
+		if _, replace := values[key]; !replace {
 			out = append(out, item)
 		}
 	}
-	return append(out, prefix+value)
+	for key, value := range values {
+		out = append(out, key+"="+value)
+	}
+	return out
 }
 
 func projectRunSpecForDir(dir string) (projectRunSpec, error) {
 	has := func(name string) bool {
 		info, err := os.Stat(filepath.Join(dir, name))
 		return err == nil && info.Mode().IsRegular()
+	}
+	if has(".goampp-framework") {
+		data, err := os.ReadFile(filepath.Join(dir, ".goampp-framework"))
+		if err != nil {
+			return projectRunSpec{}, fmt.Errorf("read GoAMPP framework metadata: %w", err)
+		}
+		spec, err := frameworkProjectRunSpec(dir, strings.TrimSpace(string(data)))
+		if err != nil {
+			return projectRunSpec{}, err
+		}
+		switch spec.PortMode {
+		case "framework:laravel", "framework:livewire":
+			if !has("artisan") { return projectRunSpec{}, fmt.Errorf("Laravel artisan entry point was not found") }
+		case "framework:symfony":
+			if !has(filepath.Join("public", "index.php")) { return projectRunSpec{}, fmt.Errorf("Symfony public/index.php was not found") }
+		case "framework:codeigniter":
+			if !has("spark") { return projectRunSpec{}, fmt.Errorf("CodeIgniter spark entry point was not found") }
+		case "framework:wordpress":
+			if !has("index.php") || !has(".goampp-router.php") { return projectRunSpec{}, fmt.Errorf("WordPress entry point or local router was not found") }
+		case "framework:nextjs", "framework:vite", "framework:nestjs", "framework:adonis":
+			if !has("package.json") { return projectRunSpec{}, fmt.Errorf("package.json was not found") }
+		case "framework:express":
+			if !has("index.js") { return projectRunSpec{}, fmt.Errorf("Express index.js entry point was not found") }
+		case "framework:flask":
+			if !has("app.py") { return projectRunSpec{}, fmt.Errorf("Flask app.py entry point was not found") }
+		case "framework:django":
+			if !has("manage.py") { return projectRunSpec{}, fmt.Errorf("Django manage.py entry point was not found") }
+		case "framework:fastapi":
+			if !has("main.py") { return projectRunSpec{}, fmt.Errorf("FastAPI main.py entry point was not found") }
+		case "framework:go":
+			if !has("go.mod") || !has("main.go") { return projectRunSpec{}, fmt.Errorf("Go main.go or go.mod was not found") }
+		case "framework:springboot":
+			if !has("mvnw") || !has("pom.xml") { return projectRunSpec{}, fmt.Errorf("Spring Boot Maven wrapper or pom.xml was not found") }
+		}
+		return spec, nil
 	}
 	switch {
 	case has("package.json") && has("server.js"):
@@ -145,6 +265,12 @@ func startProject(root, name string) (string, error) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	if spec.PortMode == "env" {
 		cmd.Env = environmentWith("GOAMPP_PORT", strconv.Itoa(spec.Port))
+	} else if strings.HasPrefix(spec.PortMode, "framework:") {
+		cmd.Env = environmentWithValues(map[string]string{
+			"GOAMPP_PORT": strconv.Itoa(spec.Port),
+			"PORT": strconv.Itoa(spec.Port),
+			"HOST": "127.0.0.1",
+		})
 	}
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
