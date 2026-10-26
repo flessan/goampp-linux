@@ -19,6 +19,7 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
@@ -338,7 +339,7 @@ func Run() {
 	installCard := linuxSurface(container.NewVBox(
 		widget.NewLabelWithStyle("System packages", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewLabel("GoAMPP uses packages managed by your distribution and never silently installs system services."),
-		widget.NewButtonWithIcon("Show package command", theme.TerminalIcon(), func() {
+		widget.NewButtonWithIcon("Show package command", theme.ComputerIcon(), func() {
 			command := suggestedInstallCommand()
 			entry := widget.NewEntry()
 			entry.SetText(command)
