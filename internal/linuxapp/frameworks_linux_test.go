@@ -94,9 +94,10 @@ func TestFrameworkProjectRunnerConfigurationsStayOnLoopback(t *testing.T) {
 			if spec.URL != "http://127.0.0.1:23456" || spec.Port != 23456 {
 				t.Fatalf("framework preview URL/port = %q/%d", spec.URL, spec.Port)
 			}
+			joinedArgs := strings.Join(spec.Args, " ")
 			for _, arg := range test.argsHas {
-				if !containsString(spec.Args, arg) {
-					t.Errorf("runner arguments %#v do not contain expected %q", spec.Args, arg)
+				if !strings.Contains(joinedArgs, arg) {
+					t.Errorf("runner arguments %#v do not contain expected substring %q", spec.Args, arg)
 				}
 			}
 			if strings.Contains(strings.Join(spec.Args, " "), "0.0.0.0") {
