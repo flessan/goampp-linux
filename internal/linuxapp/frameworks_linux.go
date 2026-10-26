@@ -268,6 +268,9 @@ func downloadLinuxFrameworkZip(rawURL, root, stripTop string, log func(string)) 
 	if err != nil { return fmt.Errorf("invalid framework ZIP archive: %w", err) }
 	defer archive.Close()
 	extracted := 0
+	var totalUncompressed int64
+	const maxEntryUncompressed = int64(128 * 1024 * 1024)
+	const maxTotalUncompressed = int64(1024 * 1024 * 1024)
 	for _, file := range archive.File {
 		entry := filepath.Clean(filepath.FromSlash(file.Name))
 		if filepath.IsAbs(entry) || entry == ".." || strings.HasPrefix(entry, ".."+string(os.PathSeparator)) {
@@ -302,11 +305,21 @@ func downloadLinuxFrameworkZip(rawURL, root, stripTop string, log func(string)) 
 		if err != nil { return err }
 		dst, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
 		if err != nil { _ = src.Close(); return err }
-		written, copyErr := io.Copy(dst, io.LimitReader(src, 128*1024*1024+1))
+		entryLimit := maxEntryUncompressed
+		if remaining := maxTotalUncompressed - totalUncompressed; remaining < entryLimit {
+			entryLimit = remaining
+		}
+		written, copyErr := io.Copy(dst, io.LimitReader(src, entryLimit+1))
 		srcErr := src.Close()
 		dstErr := dst.Close()
 		if copyErr != nil { return copyErr }
-		if written > 128*1024*1024 { return fmt.Errorf("archive entry %q exceeds the 128 MiB safety limit", file.Name) }
+		if written > entryLimit {
+			if entryLimit < maxEntryUncompressed {
+				return fmt.Errorf("framework archive exceeds the 1 GiB total extracted-size safety limit")
+			}
+			return fmt.Errorf("archive entry %q exceeds the 128 MiB safety limit", file.Name)
+		}
+		totalUncompressed += written
 		if srcErr != nil { return srcErr }
 		if dstErr != nil { return dstErr }
 		extracted++
