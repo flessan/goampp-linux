@@ -371,8 +371,9 @@ func linuxSectionLabel(value string) fyne.CanvasObject {
 }
 
 func linuxInfoPage(title, body string, icon fyne.Resource) fyne.CanvasObject {
+	iconView := container.NewGridWrap(fyne.NewSize(34, 34), widget.NewIcon(icon))
 	content := container.NewVBox(
-		container.NewHBox(linuxImage(linuxLogoResource(), 32, "GoAMPP"), linuxHSpace(10), linuxBoldText(title, 14)),
+		container.NewHBox(iconView, linuxHSpace(10), linuxBoldText(title, 14)),
 		linuxVSpace(8),
 		widget.NewLabel(body),
 	)
