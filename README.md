@@ -24,7 +24,7 @@ A native desktop web-stack control panel written in Go. On Windows, GoAMPP ships
 
 ### Linux (native support)
 
-- Native desktop dashboard with System, Light, and Dark appearances, searchable service/runtime cards, status activity, and in-app project logs
+- Native desktop dashboard with System and Dark appearances, searchable service/runtime cards, status activity, and in-app project logs; Light mode is not available yet, and contributions to implement it are welcome at [GitHub](https://github.com/flessan/goampp-linux)
 - Detects common web servers, PHP-FPM, databases, Redis, RabbitMQ, and developer runtimes installed by the host distribution
 - Starts/stops detected systemd, OpenRC, or SysV init services when the current account is authorized
 - Config Editor can open common service configs or any text file; saves use an atomic replacement and a timestamped backup in the user cache. System files still require the permissions needed by the OS
