@@ -108,7 +108,7 @@ func linuxHostConfig(host linuxVHost) string {
 	if host.Server == "nginx" || host.Server == "both" {
 		nginxRoot := strings.ReplaceAll(host.DocumentRoot, "\\", "/")
 		nginxRoot = strings.ReplaceAll(nginxRoot, "'", "\\'")
-		snippets = append(snippets, fmt.Sprintf("# Nginx server block for %s\nserver {\n    listen %d;\n    server_name %s;\n    root '%s';\n    index index.php index.html index.htm;\n\n    location / {\n        try_files $uri $uri/ =404;\n    }\n}", port, host.Domain, nginxRoot))
+		snippets = append(snippets, fmt.Sprintf("# Nginx server block for %s\nserver {\n    listen %d;\n    server_name %s;\n    root '%s';\n    index index.php index.html index.htm;\n\n    location / {\n        try_files $uri $uri/ =404;\n    }\n}", host.Domain, port, host.Domain, nginxRoot))
 	}
 	return strings.Join(snippets, "\n\n")
 }
