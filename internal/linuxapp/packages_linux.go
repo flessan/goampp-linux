@@ -4,6 +4,7 @@ package linuxapp
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -126,11 +127,49 @@ func showLinuxPackageCommand(w fyne.Window, name string, isTool bool) {
 	copyButton := widget.NewButtonWithIcon("Copy command", theme.ContentCopyIcon(), func() {
 		w.Clipboard().SetContent(command)
 		linuxSetStatus("Install command copied for " + name)
+		linuxAddLog("Install command copied for " + name)
 	})
-	note := widget.NewLabel("This is a suggested command only. Review it, then run it in a terminal if you trust your distribution's package source. GoAMPP will not run sudo or install packages on its own.")
+	runButton := widget.NewButtonWithIcon("Run in terminal", theme.ComputerIcon(), func() {
+		dialog.ShowConfirm(
+			"Run package installation?",
+			"This opens a terminal and runs the package-manager command shown above. It may change system packages and ask for your administrator password. GoAMPP will not hide the command output.",
+			func(ok bool) {
+				if !ok {
+					return
+				}
+				fields := strings.Fields(command)
+				if len(fields) == 0 {
+					dialog.ShowError(fmt.Errorf("empty package command"), w)
+					return
+				}
+				quoted := make([]string, 0, len(fields))
+				for _, field := range fields {
+					quoted = append(quoted, shellQuoteLinuxArg(field))
+				}
+				shellScript := strings.Join(quoted, " ") + "; status=$?; printf '\\nPackage command exited with status %s. Press Enter to close this terminal.\\n' \"$status\"; read -r _; exit \"$status\""
+				shell := "bash"
+				if _, err := exec.LookPath(shell); err != nil {
+					shell = "sh"
+				}
+				home, _ := os.UserHomeDir()
+				if err := openLinuxTerminal(home, shell, "-lc", shellScript); err != nil {
+					dialog.ShowError(err, w)
+					return
+				}
+				linuxSetStatus("Package command started in terminal for " + name)
+				linuxAddLog("Started explicit package installation in terminal for " + name)
+			},
+			w,
+		)
+	})
+	note := widget.NewLabel("Review the distribution package names before running. Installation occurs only after you press Run in terminal and confirm; service configuration is not changed automatically.")
 	note.Wrapping = fyne.TextWrapWord
-	content := container.NewVBox(note, linuxVSpace(8), container.NewBorder(nil, nil, nil, copyButton, commandLabel))
+	content := container.NewVBox(note, linuxVSpace(8), commandLabel, linuxVSpace(8), container.NewHBox(copyButton, runButton))
 	d := dialog.NewCustom("Install "+name, "Close", content, w)
-	d.Resize(fyne.NewSize(560, 190))
+	d.Resize(fyne.NewSize(620, 220))
 	d.Show()
+}
+
+func shellQuoteLinuxArg(value string) string {
+	return "'" + strings.ReplaceAll(value, "'", "'\\''") + "'"
 }
