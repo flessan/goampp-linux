@@ -261,15 +261,20 @@ func buildLinuxVHostsPage(w fyne.Window, projectDir string) fyne.CanvasObject {
 		}
 	})
 	remove := widget.NewButtonWithIcon("Delete", theme.DeleteIcon(), func() {
-		if selected < 0 || selected >= len(hosts) {
+		deleteIndex := selected
+		if deleteIndex < 0 || deleteIndex >= len(hosts) {
 			return
 		}
-		name := hosts[selected].Domain
+		name := hosts[deleteIndex].Domain
 		dialog.ShowConfirm("Delete virtual host", "Remove "+name+" from GoAMPP? Project files and system configuration are kept.", func(ok bool) {
 			if !ok {
 				return
 			}
-			hosts = append(hosts[:selected], hosts[selected+1:]...)
+			if deleteIndex < 0 || deleteIndex >= len(hosts) || hosts[deleteIndex].Domain != name {
+				dialog.ShowInformation("Virtual host changed", "The selected host list changed while the confirmation was open. Select the host again and retry.", w)
+				return
+			}
+			hosts = append(hosts[:deleteIndex], hosts[deleteIndex+1:]...)
 			if err := saveLinuxVHosts(hosts); err != nil {
 				dialog.ShowError(err, w)
 				return
