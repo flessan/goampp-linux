@@ -705,22 +705,22 @@ func makeToolCard(w fyne.Window, tool toolDefinition) fyne.CanvasObject {
 		}
 	}
 	title := widget.NewLabelWithStyle(tool.Name, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
-	details := container.NewVBox(title, statusLabel)
+	identity := container.NewHBox(
+		linuxImage(linuxToolResource(tool.Name), 36, tool.Name),
+		linuxHGap(10),
+		container.NewCenter(title),
+	)
 	if binary == "" {
 		installButton := widget.NewButtonWithIcon("Install guide", theme.DownloadIcon(), func() {
 			showLinuxPackageCommand(w, tool.Name, true)
 		})
 		installButton.Importance = widget.LowImportance
-		return linuxSurface(container.NewBorder(nil, nil,
-			container.NewHBox(linuxImage(linuxToolResource(tool.Name), 36, tool.Name), linuxHGap(10), details),
-			installButton, linuxGap(1)), 9, 9, 10, 10)
+		identity = container.NewBorder(nil, nil, identity, installButton, linuxGap(1))
 	}
-	body := container.NewHBox(
-		linuxImage(linuxToolResource(tool.Name), 36, tool.Name),
-		linuxHGap(10),
-		details,
-	)
-	return linuxSurface(body, 9, 9, 10, 10)
+	return linuxSurface(container.NewVBox(
+		identity,
+		linuxPad(statusLabel, 4, 0, 46, 0),
+	), 9, 9, 10, 10)
 }
 
 func runCommandWithTimeout(timeout time.Duration, command string, args ...string) ([]byte, error) {
