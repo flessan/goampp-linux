@@ -676,11 +676,34 @@ func runServiceAction(w fyne.Window, action *widget.Button, manager, unit, verb 
 	go func() {
 		err := controlUnit(manager, unit, verb)
 		fyne.Do(func() {
+			action.Enable()
 			if err != nil {
+				switch verb {
+				case "start":
+					action.SetText("Start")
+					action.SetIcon(theme.MediaPlayIcon())
+				case "stop":
+					action.SetText("Stop")
+					action.SetIcon(theme.MediaStopIcon())
+				case "restart":
+					action.SetText("Restart")
+					action.SetIcon(theme.MediaReplayIcon())
+				}
 				linuxAddLog("Service " + unit + " " + verb + " failed: " + err.Error())
 				linuxSetStatus("Service action failed: " + unit)
 				dialog.ShowError(err, w)
 			} else {
+				switch verb {
+				case "start":
+					action.SetText("Stop")
+					action.SetIcon(theme.MediaStopIcon())
+				case "stop":
+					action.SetText("Start")
+					action.SetIcon(theme.MediaPlayIcon())
+				case "restart":
+					action.SetText("Restart")
+					action.SetIcon(theme.MediaReplayIcon())
+				}
 				linuxAddLog("Service " + unit + " " + verb + " completed")
 				linuxSetStatus("Service " + unit + " " + verb + " completed")
 			}
