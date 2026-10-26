@@ -81,7 +81,7 @@ func Run() {
 	brandSubtitle := widget.NewLabel("A local development workspace for Linux")
 	brand := container.NewHBox(
 		linuxImage(linuxLogoResource(), 42, "GoAMPP"),
-		linuxGap(12),
+		linuxHGap(12),
 		container.NewVBox(brandTitle, brandSubtitle),
 	)
 	platformLabel := widget.NewLabelWithStyle("NATIVE LINUX", fyne.TextAlignTrailing, fyne.TextStyle{Bold: true})
@@ -241,7 +241,7 @@ func Run() {
 				pathLabel := widget.NewLabel(filepath.Join(projectDir, projectName))
 				pathLabel.Truncation = fyne.TextTruncateEllipsis
 				projectDetails := container.NewVBox(nameLabel, pathLabel)
-				projectIdentity := container.NewHBox(linuxLetterMark(projectName, 38), linuxGap(10), projectDetails)
+				projectIdentity := container.NewHBox(linuxLetterMark(projectName, 38), linuxHGap(10), projectDetails)
 				projectRow := container.NewBorder(nil, nil, projectIdentity, container.NewHBox(actions...), linuxGap(1))
 				projectList.Add(linuxSurface(projectRow, 8, 8, 10, 10))
 				projectList.Add(linuxGap(8))
@@ -387,7 +387,7 @@ func makeServiceCard(w fyne.Window, state serviceState, refresh func()) fyne.Can
 	}
 	identity := container.NewHBox(
 		linuxImage(linuxServiceResource(state.Definition.Name), 38, state.Definition.Name),
-		linuxGap(10),
+		linuxHGap(10),
 		info,
 	)
 	return linuxSurface(container.NewBorder(nil, nil, identity, action, linuxGap(1)), 10, 10, 12, 12)
@@ -442,7 +442,7 @@ func makeToolCard(tool toolDefinition) fyne.CanvasObject {
 	title := widget.NewLabelWithStyle(tool.Name, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
 	body := container.NewHBox(
 		linuxImage(linuxToolResource(tool.Name), 36, tool.Name),
-		linuxGap(10),
+		linuxHGap(10),
 		container.NewVBox(title, statusLabel),
 	)
 	return linuxSurface(body, 9, 9, 10, 10)
