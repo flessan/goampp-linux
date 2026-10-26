@@ -87,6 +87,12 @@ var toolDefinitions = []toolDefinition{
 func Run() {
 	a := app.NewWithID("cc.thio.goampp.linux")
 	themePreference := a.Preferences().StringWithFallback("theme", "System")
+	// Light mode is intentionally not exposed until its palette is complete.
+	// Reset old saved Light preferences to System so existing installs recover cleanly.
+	if themePreference != "Dark" && themePreference != "System" {
+		themePreference = "System"
+		a.Preferences().SetString("theme", themePreference)
+	}
 	a.Settings().SetTheme(newLinuxGoamppTheme(themePreference))
 	if logo := linuxLogoResource(); logo != nil {
 		a.SetIcon(logo)
@@ -438,7 +444,7 @@ func Run() {
 	), 0, 12, 0, 0))
 	refreshProjects()
 
-	themes := []string{"System", "Light", "Dark"}
+	themes := []string{"System", "Dark"}
 	themeControl := newLinuxSegmented(themes, func(index int) {
 		preference := themes[index]
 		a.Preferences().SetString("theme", preference)
@@ -453,14 +459,29 @@ func Run() {
 			break
 		}
 	}
-	appearanceRow := container.New(layout.NewCustomPaddedLayout(8, 8, 12, 8), container.NewBorder(
-		nil, nil,
-		container.NewVBox(
-			widget.NewLabelWithStyle("Theme", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-			widget.NewLabel("System follows your Linux desktop appearance."),
+	lightModeInfo := linuxSurface(container.NewVBox(
+		container.NewHBox(
+			widget.NewIcon(theme.InfoIcon()),
+			linuxBoldText("Light mode is not available yet", 12.5),
 		),
-		container.NewCenter(themeControl.obj),
-	))
+		widget.NewLabel("Flessan, the maintainer working on this project, has not finished the light theme yet. Contributions are open on GitHub if you'd like to help build it."),
+		widget.NewButtonWithIcon("Contribute on GitHub", theme.NavigateExternalIcon(), func() {
+			if err := openExternal("https://github.com/flessan/goampp-linux"); err != nil {
+				dialog.ShowError(err, w)
+			}
+		}),
+	), 8, 8, 12, 12)
+	appearanceRow := container.NewVBox(
+		container.New(layout.NewCustomPaddedLayout(8, 8, 12, 8), container.NewBorder(
+			nil, nil,
+			container.NewVBox(
+				widget.NewLabelWithStyle("Theme", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+				widget.NewLabel("System follows your Linux desktop appearance. Dark is always available."),
+			),
+			container.NewCenter(themeControl.obj),
+		)),
+		lightModeInfo,
+	)
 
 	var trayPreference fyne.CanvasObject
 	if trayAvailable {
