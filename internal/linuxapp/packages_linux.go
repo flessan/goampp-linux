@@ -24,11 +24,14 @@ type linuxPackageNames struct {
 var linuxServicePackages = map[string]linuxPackageNames{
 	"Apache HTTP Server": {APT: "apache2", Pacman: "apache", DNF: "httpd", Zypper: "apache2"},
 	"Nginx":              {APT: "nginx", Pacman: "nginx", DNF: "nginx", Zypper: "nginx"},
-	"PHP-FPM":            {APT: "php-fpm", Pacman: "php", DNF: "php-fpm", Zypper: "php8-fpm"},
+	"Caddy":              {APT: "caddy", Pacman: "caddy", DNF: "caddy", Zypper: "caddy"},
+	"PHP-FPM":            {APT: "php-fpm", Pacman: "php-fpm", DNF: "php-fpm", Zypper: "php8-fpm"},
 	"MariaDB / MySQL":    {APT: "mariadb-server", Pacman: "mariadb", DNF: "mariadb-server", Zypper: "mariadb"},
 	"PostgreSQL":         {APT: "postgresql", Pacman: "postgresql", DNF: "postgresql-server", Zypper: "postgresql-server"},
 	"Redis":              {APT: "redis-server", Pacman: "redis", DNF: "redis", Zypper: "redis"},
+	"Memcached":          {APT: "memcached", Pacman: "memcached", DNF: "memcached", Zypper: "memcached"},
 	"RabbitMQ":           {APT: "rabbitmq-server", Pacman: "rabbitmq", DNF: "rabbitmq-server", Zypper: "rabbitmq-server"},
+	"Docker Engine":      {APT: "docker.io", Pacman: "docker", DNF: "docker", Zypper: "docker"},
 }
 
 var linuxToolPackages = map[string]linuxPackageNames{
@@ -40,7 +43,19 @@ var linuxToolPackages = map[string]linuxPackageNames{
 	"Go":       {APT: "golang-go", Pacman: "go", DNF: "golang", Zypper: "go"},
 	"Java":     {APT: "default-jdk", Pacman: "jdk-openjdk", DNF: "java-latest-openjdk-devel", Zypper: "java-17-openjdk-devel"},
 	"Rust":     {APT: "rustc cargo", Pacman: "rust", DNF: "rust cargo", Zypper: "rust cargo"},
+	"Cargo":    {APT: "cargo", Pacman: "rust", DNF: "cargo", Zypper: "cargo"},
+	"Ruby":     {APT: "ruby", Pacman: "ruby", DNF: "ruby", Zypper: "ruby"},
+	"Bundler":  {APT: "ruby-bundler", Pacman: "ruby-bundler", DNF: "rubygem-bundler", Zypper: "ruby-bundler"},
+	"Elixir":   {APT: "elixir", Pacman: "elixir", DNF: "elixir", Zypper: "elixir"},
+	"Erlang":   {APT: "erlang-base", Pacman: "erlang", DNF: "erlang", Zypper: "erlang"},
+	"Maven":    {APT: "maven", Pacman: "maven", DNF: "maven", Zypper: "maven"},
+	"Gradle":   {APT: "gradle", Pacman: "gradle", DNF: "gradle", Zypper: "gradle"},
+	"CMake":    {APT: "cmake", Pacman: "cmake", DNF: "cmake", Zypper: "cmake"},
+	"GCC":      {APT: "build-essential", Pacman: "base-devel", DNF: "gcc", Zypper: "gcc"},
+	"Perl":     {APT: "perl", Pacman: "perl", DNF: "perl", Zypper: "perl"},
+	"SQLite":   {APT: "sqlite3", Pacman: "sqlite", DNF: "sqlite", Zypper: "sqlite3"},
 	"Git":      {APT: "git", Pacman: "git", DNF: "git", Zypper: "git"},
+	"Docker CLI": {APT: "docker.io", Pacman: "docker", DNF: "docker", Zypper: "docker"},
 }
 
 func linuxPackageCommand(manager string, packages linuxPackageNames) (string, error) {
