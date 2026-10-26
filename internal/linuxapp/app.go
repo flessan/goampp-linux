@@ -828,7 +828,7 @@ func serviceCommand(manager, unit, action string) (string, []string, error) {
 		return "", nil, fmt.Errorf("service name is required")
 	}
 	switch action {
-	case "start", "stop", "status":
+	case "start", "stop", "restart", "status":
 	default:
 		return "", nil, fmt.Errorf("unsupported service action %q", action)
 	}
