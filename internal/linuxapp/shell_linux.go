@@ -29,6 +29,7 @@ type linuxPage struct {
 type linuxShellState struct {
 	app     fyne.App
 	window  fyne.Window
+	root    fyne.CanvasObject
 	pages   []*linuxPage
 	current string
 
@@ -103,7 +104,8 @@ func renderLinuxShell() {
 		container.New(layout.NewCustomPaddedLayout(0, 10, 18, 18), pageHost),
 	)
 	bg := canvas.NewRectangle(theme.Color(theme.ColorNameBackground))
-	linuxShell.window.SetContent(container.NewBorder(nil, nil, buildLinuxSidebar(), nil, container.NewStack(bg, main)))
+	linuxShell.root = container.NewBorder(nil, nil, buildLinuxSidebar(), nil, container.NewStack(bg, main))
+	linuxShell.window.SetContent(linuxShell.root)
 	linuxShowPage(linuxShell.current)
 }
 
@@ -384,4 +386,85 @@ func linuxInfoPage(title, body string, icon fyne.Resource) fyne.CanvasObject {
 
 func linuxVersionLabel() string {
 	return fmt.Sprintf("GoAMPP for Linux · %s", "native")
+}
+
+
+func linuxSameColor(left, right color.Color) bool {
+	if left == nil || right == nil {
+		return left == nil && right == nil
+	}
+	l := color.NRGBAModel.Convert(left).(color.NRGBA)
+	r := color.NRGBAModel.Convert(right).(color.NRGBA)
+	return l == r
+}
+
+func linuxRecolorColor(current color.Color, allowPrimary bool) color.Color {
+	pairs := []struct {
+		dark, light color.Color
+		name         fyne.ThemeColorName
+	}{
+		{linuxDarkPalette.bg, linuxLightPalette.bg, theme.ColorNameBackground},
+		{linuxDarkPalette.sidebar, linuxLightPalette.sidebar, linuxColorSidebar},
+		{linuxDarkPalette.card, linuxLightPalette.card, linuxColorCard},
+		{linuxDarkPalette.border, linuxLightPalette.border, linuxColorCardBorder},
+		{linuxDarkPalette.input, linuxLightPalette.input, theme.ColorNameInputBackground},
+		{linuxDarkPalette.button, linuxLightPalette.button, theme.ColorNameButton},
+		{linuxDarkPalette.hover, linuxLightPalette.hover, theme.ColorNameHover},
+		{linuxDarkPalette.pressed, linuxLightPalette.pressed, theme.ColorNamePressed},
+		{linuxDarkPalette.fg, linuxLightPalette.fg, theme.ColorNameForeground},
+		{linuxDarkPalette.muted, linuxLightPalette.muted, linuxColorMuted},
+		{linuxDarkPalette.primary, linuxLightPalette.primary, theme.ColorNamePrimary},
+		{linuxDarkPalette.navActive, linuxLightPalette.navActive, linuxColorNavActive},
+		{linuxDarkPalette.separator, linuxLightPalette.separator, theme.ColorNameSeparator},
+		{linuxDarkPalette.menu, linuxLightPalette.menu, theme.ColorNameMenuBackground},
+		{linuxDarkPalette.overlay, linuxLightPalette.overlay, theme.ColorNameOverlayBackground},
+		{linuxDarkPalette.header, linuxLightPalette.header, theme.ColorNameHeaderBackground},
+		{linuxDarkPalette.scroll, linuxLightPalette.scroll, theme.ColorNameScrollBar},
+		{linuxDarkPalette.shadow, linuxLightPalette.shadow, theme.ColorNameShadow},
+		{linuxDarkPalette.selection, linuxLightPalette.selection, theme.ColorNameSelection},
+		{linuxDarkPalette.logBg, linuxLightPalette.logBg, linuxColorLogBg},
+		{linuxDarkPalette.placeholder, linuxLightPalette.placeholder, theme.ColorNamePlaceHolder},
+		{linuxDarkPalette.disabled, linuxLightPalette.disabled, theme.ColorNameDisabled},
+		{linuxDarkPalette.disabledBtn, linuxLightPalette.disabledBtn, theme.ColorNameDisabledButton},
+	}
+	for _, pair := range pairs {
+		if pair.name == theme.ColorNamePrimary && !allowPrimary {
+			continue
+		}
+		if linuxSameColor(current, pair.dark) || linuxSameColor(current, pair.light) {
+			return theme.Color(pair.name)
+		}
+	}
+	return current
+}
+
+func linuxRecolorObject(obj fyne.CanvasObject) {
+	switch item := obj.(type) {
+	case *linuxNavItem:
+		item.applyState()
+	case *canvas.Rectangle:
+		item.FillColor = linuxRecolorColor(item.FillColor, false)
+		item.StrokeColor = linuxRecolorColor(item.StrokeColor, false)
+		item.Refresh()
+	case *canvas.Text:
+		item.Color = linuxRecolorColor(item.Color, true)
+		item.Refresh()
+	case *canvas.Circle:
+		item.FillColor = linuxRecolorColor(item.FillColor, true)
+		item.Refresh()
+	case *fyne.Container:
+		for _, child := range item.Objects {
+			linuxRecolorObject(child)
+		}
+	}
+}
+
+func refreshLinuxThemeSurfaces() {
+	fyne.Do(func() {
+		if linuxShell.root == nil || linuxShell.window == nil {
+			return
+		}
+		linuxRecolorObject(linuxShell.root)
+		linuxShell.window.Canvas().Refresh(linuxShell.root)
+	})
 }
