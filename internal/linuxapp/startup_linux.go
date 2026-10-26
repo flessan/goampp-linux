@@ -5,7 +5,8 @@ package linuxapp
 import (
 	"fmt"
 	"os"
-	"path/filepath"
+	"os/exec"
+	"time"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -24,7 +25,7 @@ type linuxStartupState struct {
 func linuxStartupEnabled(manager, unit string) (bool, bool) {
 	switch manager {
 	case "systemd":
-		output, err := runCommandWithTimeout(4_000_000_000, "systemctl", "is-enabled", unit)
+		output, err := runCommandWithTimeout(4*time.Second, "systemctl", "is-enabled", unit)
 		value := strings.TrimSpace(string(output))
 		switch value {
 		case "enabled", "enabled-runtime", "linked", "linked-runtime", "alias":
@@ -124,7 +125,7 @@ func setLinuxStartup(manager, unit string, enable bool) error {
 	if _, err := execLookPath(command); err != nil {
 		return err
 	}
-	output, err := runCommandWithTimeout(15_000_000_000, command, args...)
+	output, err := runCommandWithTimeout(15*time.Second, command, args...)
 	if err != nil {
 		message := strings.TrimSpace(string(output))
 		if message == "" {
@@ -136,7 +137,7 @@ func setLinuxStartup(manager, unit string, enable bool) error {
 }
 
 func execLookPath(command string) (string, error) {
-	path, err := filepath.LookPath(command)
+	path, err := exec.LookPath(command)
 	if err != nil {
 		return "", fmt.Errorf("%s is not installed or not available on PATH", command)
 	}
@@ -179,7 +180,7 @@ func buildLinuxStartupPage(w fyne.Window) fyne.CanvasObject {
 					}
 					check := widget.NewCheck(checkLabel, nil)
 					check.SetChecked(state.Enabled)
-					check.Disabled = !state.Known
+					if !state.Known { check.Disable() }
 					check.OnChanged = func(enable bool) {
 						check.Disable()
 						go func() {
