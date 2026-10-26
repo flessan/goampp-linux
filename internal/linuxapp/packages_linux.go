@@ -55,7 +55,8 @@ var linuxToolPackages = map[string]linuxPackageNames{
 	"Perl":     {APT: "perl", Pacman: "perl", DNF: "perl", Zypper: "perl"},
 	"SQLite":   {APT: "sqlite3", Pacman: "sqlite", DNF: "sqlite", Zypper: "sqlite3"},
 	"Git":      {APT: "git", Pacman: "git", DNF: "git", Zypper: "git"},
-	"Docker CLI": {APT: "docker.io", Pacman: "docker", DNF: "docker", Zypper: "docker"},
+	"Docker CLI":          {APT: "docker.io", Pacman: "docker", DNF: "docker", Zypper: "docker"},
+	"PostgreSQL client":   {APT: "postgresql-client", Pacman: "postgresql", DNF: "postgresql", Zypper: "postgresql"},
 }
 
 func linuxPackageCommand(manager string, packages linuxPackageNames) (string, error) {
