@@ -42,11 +42,14 @@ type serviceState struct {
 var serviceDefinitions = []serviceDefinition{
 	{Name: "Apache HTTP Server", Binaries: []string{"apache2", "httpd"}, Units: []string{"apache2", "httpd"}},
 	{Name: "Nginx", Binaries: []string{"nginx"}, Units: []string{"nginx"}},
-	{Name: "PHP-FPM", Binaries: []string{"php-fpm", "php-fpm8.5", "php-fpm8.4", "php-fpm8.3", "php-fpm8.2", "php-fpm8.1", "php-fpm8.0"}, Units: []string{"php-fpm", "php8.5-fpm", "php8.4-fpm", "php8.3-fpm", "php8.2-fpm", "php8.1-fpm", "php8.0-fpm"}},
+	{Name: "Caddy", Binaries: []string{"caddy"}, Units: []string{"caddy"}},
+	{Name: "PHP-FPM", Binaries: []string{"php-fpm", "php-fpm8.6", "php-fpm8.5", "php-fpm8.4", "php-fpm8.3", "php-fpm8.2", "php-fpm8.1", "php-fpm8.0"}, Units: []string{"php-fpm", "php8.6-fpm", "php8.5-fpm", "php8.4-fpm", "php8.3-fpm", "php8.2-fpm", "php8.1-fpm", "php8.0-fpm"}},
 	{Name: "MariaDB / MySQL", Binaries: []string{"mariadbd", "mysqld"}, Units: []string{"mariadb", "mysql", "mysqld"}},
 	{Name: "PostgreSQL", Binaries: []string{"postgres"}, Units: []string{"postgresql"}},
 	{Name: "Redis", Binaries: []string{"redis-server"}, Units: []string{"redis-server", "redis"}},
+	{Name: "Memcached", Binaries: []string{"memcached"}, Units: []string{"memcached"}},
 	{Name: "RabbitMQ", Binaries: []string{"rabbitmq-server"}, Units: []string{"rabbitmq-server"}},
+	{Name: "Docker Engine", Binaries: []string{"dockerd"}, Units: []string{"docker"}},
 }
 
 type toolDefinition struct {
@@ -64,7 +67,19 @@ var toolDefinitions = []toolDefinition{
 	{Name: "Go", Binaries: []string{"go"}, Arguments: []string{"version"}},
 	{Name: "Java", Binaries: []string{"java"}, Arguments: []string{"-version"}},
 	{Name: "Rust", Binaries: []string{"rustc"}, Arguments: []string{"--version"}},
+	{Name: "Cargo", Binaries: []string{"cargo"}, Arguments: []string{"--version"}},
+	{Name: "Ruby", Binaries: []string{"ruby"}, Arguments: []string{"--version"}},
+	{Name: "Bundler", Binaries: []string{"bundle"}, Arguments: []string{"--version"}},
+	{Name: "Elixir", Binaries: []string{"elixir"}, Arguments: []string{"--version"}},
+	{Name: "Erlang", Binaries: []string{"erl"}, Arguments: []string{"-noshell", "-eval", "io:format(\"~s~n\", [erlang:system_info(otp_release)]), halt()."}},
+	{Name: "Maven", Binaries: []string{"mvn"}, Arguments: []string{"--version"}},
+	{Name: "Gradle", Binaries: []string{"gradle"}, Arguments: []string{"--version"}},
+	{Name: "CMake", Binaries: []string{"cmake"}, Arguments: []string{"--version"}},
+	{Name: "GCC", Binaries: []string{"gcc"}, Arguments: []string{"--version"}},
+	{Name: "Perl", Binaries: []string{"perl"}, Arguments: []string{"--version"}},
+	{Name: "SQLite", Binaries: []string{"sqlite3"}, Arguments: []string{"--version"}},
 	{Name: "Git", Binaries: []string{"git"}, Arguments: []string{"--version"}},
+	{Name: "Docker CLI", Binaries: []string{"docker"}, Arguments: []string{"--version"}},
 }
 
 func Run() {
@@ -98,10 +113,15 @@ func Run() {
 			title string
 			match func(serviceState) bool
 		}{
-			{"WEB SERVERS", func(state serviceState) bool { return state.Definition.Name == "Apache HTTP Server" || state.Definition.Name == "Nginx" }},
+			{"WEB SERVERS", func(state serviceState) bool {
+				return state.Definition.Name == "Apache HTTP Server" || state.Definition.Name == "Nginx" || state.Definition.Name == "Caddy"
+			}},
 			{"DATABASES & CACHES", func(state serviceState) bool {
 				return state.Definition.Name == "MariaDB / MySQL" || state.Definition.Name == "PostgreSQL" ||
-					state.Definition.Name == "Redis" || state.Definition.Name == "RabbitMQ"
+					state.Definition.Name == "Redis" || state.Definition.Name == "Memcached"
+			}},
+			{"QUEUES & CONTAINERS", func(state serviceState) bool {
+				return state.Definition.Name == "RabbitMQ" || state.Definition.Name == "Docker Engine"
 			}},
 			{"LANGUAGES & RUNTIMES", func(state serviceState) bool { return state.Definition.Name == "PHP-FPM" }},
 		}
