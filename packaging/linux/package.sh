@@ -11,14 +11,20 @@ else
 fi
 OUT="${OUTPUT_DIR:-$ROOT/dist/packages}"
 BIN="$ROOT/dist/linux/goampp-linux"
+ICON="$ROOT/dist/linux/goampp-icon-512.png"
 STAGE="$ROOT/dist/linux-bundle"
 APPDIR="$OUT/GoAMPP.AppDir"
-mkdir -p "$OUT"
+mkdir -p "$OUT" "$ROOT/dist/linux"
 
 if [[ ! -x "$BIN" ]]; then
   echo "Linux binary not found at $BIN; build it first." >&2
   exit 1
 fi
+if ! command -v convert >/dev/null 2>&1; then
+  echo "ImageMagick 'convert' is required to generate standard-size application icons." >&2
+  exit 1
+fi
+convert "$ROOT/assets/logo.png" -resize 512x512\! "$ICON"
 
 # Standalone archive keeps the existing per-user install/uninstall workflow.
 rm -rf "$STAGE"
@@ -26,7 +32,7 @@ mkdir -p "$STAGE"
 install -m 0755 "$BIN" "$STAGE/goampp-linux"
 install -m 0644 "$ROOT/README.md" "$ROOT/packaging/linux/goampp.desktop" "$STAGE/"
 install -m 0755 "$ROOT/packaging/linux/install.sh" "$ROOT/packaging/linux/uninstall.sh" "$STAGE/"
-install -m 0644 "$ROOT/assets/logo.png" "$STAGE/logo.png"
+install -m 0644 "$ICON" "$STAGE/logo.png"
 tar -czf "$OUT/goampp-$VERSION-linux-amd64.tar.gz" -C "$STAGE" goampp-linux README.md goampp.desktop install.sh uninstall.sh logo.png
 
 # Native Debian/RPM packages install the binary, desktop entry and icon in
@@ -52,12 +58,8 @@ fi
 rm -rf "$APPDIR"
 mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/share/applications" "$APPDIR/usr/share/icons/hicolor/512x512/apps"
 install -m 0755 "$BIN" "$APPDIR/usr/bin/goampp"
-if ! command -v convert >/dev/null 2>&1; then
-  echo "ImageMagick 'convert' is required to generate standard-size AppImage icons." >&2
-  exit 1
-fi
-convert "$ROOT/assets/logo.png" -resize 512x512\! "$APPDIR/usr/share/icons/hicolor/512x512/apps/goampp.png"
-install -m 0644 "$APPDIR/usr/share/icons/hicolor/512x512/apps/goampp.png" "$APPDIR/goampp.png"
+install -m 0644 "$ICON" "$APPDIR/usr/share/icons/hicolor/512x512/apps/goampp.png"
+install -m 0644 "$ICON" "$APPDIR/goampp.png"
 sed 's/^Exec=.*/Exec=AppRun/' "$ROOT/packaging/linux/goampp.desktop" > "$APPDIR/goampp.desktop"
 install -m 0644 "$APPDIR/goampp.desktop" "$APPDIR/usr/share/applications/goampp.desktop"
 cat > "$APPDIR/AppRun" <<'APPRUN'
