@@ -67,8 +67,10 @@ jobs:
         run: |
           sh -n packaging/linux/install.sh
           sh -n packaging/linux/uninstall.sh
+          bash -n packaging/linux/package.sh
           grep -Fq 'Type=Application' packaging/linux/goampp.desktop
           grep -Fq 'Exec=goampp' packaging/linux/goampp.desktop
+          grep -Fq 'version: "@VERSION@"' packaging/linux/nfpm.yaml.in
 
       - name: Test per-user install and uninstall
         shell: bash
