@@ -141,7 +141,7 @@ func Run() {
 				if i > 0 {
 					rows.Add(linuxVSpace(5))
 				}
-				rows.Add(makeToolCard(tool))
+				rows.Add(makeToolCard(w, tool))
 			}
 			serviceList.Add(rows)
 		}
@@ -483,9 +483,16 @@ func makeServiceCard(w fyne.Window, state serviceState, refresh func()) fyne.Can
 		}
 	}
 	if state.Unit == "" {
-		action.SetText("No service unit")
-		action.SetIcon(theme.InfoIcon())
-		action.Disable()
+		if state.Binary == "" {
+			action.SetText("Install guide")
+			action.SetIcon(theme.DownloadIcon())
+			action.OnTapped = func() { showLinuxPackageCommand(w, state.Definition.Name, false) }
+			action.Enable()
+		} else {
+			action.SetText("No service unit")
+			action.SetIcon(theme.InfoIcon())
+			action.Disable()
+		}
 	}
 	identity := container.NewHBox(
 		linuxImage(linuxServiceResource(state.Definition.Name), 38, state.Definition.Name),
@@ -561,7 +568,7 @@ func runServiceAction(w fyne.Window, action *widget.Button, manager, unit, verb 
 	}()
 }
 
-func makeToolCard(tool toolDefinition) fyne.CanvasObject {
+func makeToolCard(w fyne.Window, tool toolDefinition) fyne.CanvasObject {
 	binary := findExecutable(tool.Binaries)
 	status := "Not installed"
 	if binary != "" {
@@ -589,10 +596,20 @@ func makeToolCard(tool toolDefinition) fyne.CanvasObject {
 		}(binary, append([]string(nil), tool.Arguments...), statusLabel)
 	}
 	title := widget.NewLabelWithStyle(tool.Name, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+	details := container.NewVBox(title, statusLabel)
+	if binary == "" {
+		installButton := widget.NewButtonWithIcon("Install guide", theme.DownloadIcon(), func() {
+			showLinuxPackageCommand(w, tool.Name, true)
+		})
+		installButton.Importance = widget.LowImportance
+		return linuxSurface(container.NewBorder(nil, nil,
+			container.NewHBox(linuxImage(linuxToolResource(tool.Name), 36, tool.Name), linuxHGap(10), details),
+			installButton, linuxGap(1)), 9, 9, 10, 10)
+	}
 	body := container.NewHBox(
 		linuxImage(linuxToolResource(tool.Name), 36, tool.Name),
 		linuxHGap(10),
-		container.NewVBox(title, statusLabel),
+		details,
 	)
 	return linuxSurface(body, 9, 9, 10, 10)
 }
