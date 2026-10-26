@@ -4,6 +4,7 @@ package linuxapp
 
 import (
 	"image/color"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/theme"
@@ -58,11 +59,27 @@ var linuxLightPalette = linuxPalette{
 	placeholder: linuxHex(0xa1a1aa), disabled: linuxHex(0xa1a1aa), disabledBtn: linuxHex(0xf4f4f5),
 }
 
-type linuxGoamppTheme struct{}
+type linuxGoamppTheme struct {
+	forced *fyne.ThemeVariant
+}
 
-func newLinuxGoamppTheme() *linuxGoamppTheme { return &linuxGoamppTheme{} }
+func newLinuxGoamppTheme(preference string) *linuxGoamppTheme {
+	t := &linuxGoamppTheme{}
+	switch strings.ToLower(strings.TrimSpace(preference)) {
+	case "light":
+		variant := theme.VariantLight
+		t.forced = &variant
+	case "dark":
+		variant := theme.VariantDark
+		t.forced = &variant
+	}
+	return t
+}
 
 func (t *linuxGoamppTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
+	if t.forced != nil {
+		variant = *t.forced
+	}
 	p := &linuxDarkPalette
 	if variant == theme.VariantLight {
 		p = &linuxLightPalette
