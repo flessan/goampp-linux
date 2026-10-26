@@ -241,7 +241,7 @@ jobs:
       - name: Install Fyne/GLFW system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libgl1-mesa-dev xorg-dev libwayland-dev wayland-protocols libxkbcommon-dev libxkbcommon-x11-dev libdecor-0-dev file desktop-file-utils patchelf curl
+          sudo apt-get install -y build-essential libgl1-mesa-dev xorg-dev libwayland-dev wayland-protocols libxkbcommon-dev libxkbcommon-x11-dev libdecor-0-dev file desktop-file-utils patchelf curl imagemagick
 
       - name: Vet and test
         run: |
