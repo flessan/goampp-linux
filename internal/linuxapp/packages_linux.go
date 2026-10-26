@@ -24,7 +24,7 @@ type linuxPackageNames struct {
 var linuxServicePackages = map[string]linuxPackageNames{
 	"Apache HTTP Server": {APT: "apache2", Pacman: "apache", DNF: "httpd", Zypper: "apache2"},
 	"Nginx":              {APT: "nginx", Pacman: "nginx", DNF: "nginx", Zypper: "nginx"},
-	"PHP-FPM":            {APT: "php-fpm", Pacman: "php php-fpm", DNF: "php-fpm", Zypper: "php-fpm"},
+	"PHP-FPM":            {APT: "php-fpm", Pacman: "php", DNF: "php-fpm", Zypper: "php8-fpm"},
 	"MariaDB / MySQL":    {APT: "mariadb-server", Pacman: "mariadb", DNF: "mariadb-server", Zypper: "mariadb"},
 	"PostgreSQL":         {APT: "postgresql", Pacman: "postgresql", DNF: "postgresql-server", Zypper: "postgresql-server"},
 	"Redis":              {APT: "redis-server", Pacman: "redis", DNF: "redis", Zypper: "redis"},
