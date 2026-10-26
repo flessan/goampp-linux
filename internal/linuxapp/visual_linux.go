@@ -178,6 +178,14 @@ func linuxHGap(width float32) fyne.CanvasObject {
 	return gap
 }
 
+func linuxStatusBadge(label string, value color.Color) fyne.CanvasObject {
+	dot := canvas.NewCircle(value)
+	dotBox := container.NewGridWrap(fyne.NewSize(6, 6), dot)
+	text := canvas.NewText(label, theme.Color(linuxColorMuted))
+	text.TextSize = 11.5
+	return container.NewHBox(container.NewCenter(dotBox), text)
+}
+
 func linuxPageIntro(title, subtitle string, icon fyne.Resource) fyne.CanvasObject {
 	iconView := container.NewGridWrap(fyne.NewSize(42, 42), widget.NewIcon(icon))
 	heading := container.NewVBox(
