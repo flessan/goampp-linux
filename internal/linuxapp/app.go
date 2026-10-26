@@ -267,18 +267,13 @@ func Run() {
 				}
 				actions := []fyne.CanvasObject{actionButton}
 				logPath := filepath.Join(projectDir, projectName, ".goampp-run.log")
-				if _, err := os.Stat(logPath); err == nil {
-					logButton := widget.NewButton("Logs", func() {
-						if err := openExternal(logPath); err != nil {
-							dialog.ShowError(err, w)
-						}
-					})
-					actions = append(actions, logButton)
-				}
-				actions = append(actions, openButton)
+				logButton := widget.NewButtonWithIcon("Logs", theme.DocumentIcon(), func() {
+					showProjectLog(w, projectName, logPath)
+				})
+				actions = append(actions, logButton, openButton)
 				nameLabel := widget.NewLabelWithStyle(projectName, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
 				pathLabel := widget.NewLabel(filepath.Join(projectDir, projectName))
-				pathLabel.Truncation = fyne.TextTruncateEllipsis
+				pathLabel.Wrapping = fyne.TextWrapBreak
 				projectDetails := container.NewVBox(nameLabel, pathLabel)
 				projectIdentity := container.NewHBox(linuxLetterMark(projectName, 38), linuxHGap(10), projectDetails)
 				projectRow := container.NewBorder(nil, nil, projectIdentity, container.NewHBox(actions...), linuxGap(1))
@@ -469,7 +464,7 @@ func makeServiceCard(w fyne.Window, state serviceState, refresh func()) fyne.Can
 		statusAccent = theme.Color(theme.ColorNameWarning)
 	}
 	detailLabel := widget.NewLabel(detail)
-	detailLabel.Truncation = fyne.TextTruncateEllipsis
+	detailLabel.Wrapping = fyne.TextWrapBreak
 	info := container.NewVBox(
 		widget.NewLabelWithStyle(state.Definition.Name, fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		linuxStatusBadge(status, statusAccent),
@@ -498,6 +493,46 @@ func makeServiceCard(w fyne.Window, state serviceState, refresh func()) fyne.Can
 		info,
 	)
 	return linuxSurface(container.NewBorder(nil, nil, identity, action, linuxGap(1)), 10, 10, 12, 12)
+}
+
+
+func showProjectLog(w fyne.Window, projectName, logPath string) {
+	logText := widget.NewLabel("")
+	logText.Wrapping = fyne.TextWrapBreak
+	logText.TextStyle = fyne.TextStyle{Monospace: true}
+
+	refreshLog := func() {
+		data, err := os.ReadFile(logPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				logText.SetText("No project log exists yet. Run this project first, then select Refresh.")
+				return
+			}
+			logText.SetText("Could not read project log: " + err.Error())
+			return
+		}
+		if len(data) == 0 {
+			logText.SetText("The project log is empty.")
+			return
+		}
+		logText.SetText(strings.TrimSpace(string(data)))
+	}
+	refreshLog()
+
+	refreshButton := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), refreshLog)
+	openButton := widget.NewButtonWithIcon("Open externally", theme.FolderOpenIcon(), func() {
+		if err := openExternal(logPath); err != nil {
+			dialog.ShowError(err, w)
+		}
+	})
+	content := container.NewBorder(
+		container.NewHBox(refreshButton, openButton),
+		nil, nil, nil,
+		container.NewScroll(logText),
+	)
+	d := dialog.NewCustom("Project logs · "+projectName, "Close", content, w)
+	d.Resize(fyne.NewSize(820, 520))
+	d.Show()
 }
 
 func runServiceAction(w fyne.Window, action *widget.Button, manager, unit, verb string, refresh func()) {
@@ -533,7 +568,7 @@ func makeToolCard(tool toolDefinition) fyne.CanvasObject {
 		status = "Installed at " + binary
 	}
 	statusLabel := widget.NewLabel(status)
-	statusLabel.Truncation = fyne.TextTruncateEllipsis
+	statusLabel.Wrapping = fyne.TextWrapBreak
 	if binary != "" && len(tool.Arguments) > 0 {
 		go func(binary string, args []string, label *widget.Label) {
 			output, err := runCommandWithTimeout(2*time.Second, binary, args...)
