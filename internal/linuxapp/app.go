@@ -218,13 +218,16 @@ func Run() {
 						return
 					}
 					projectStatus.SetText("Starting " + projectName + " at " + url + ". The preview will open when ready; output is saved in .goampp-run.log.")
+					linuxAddLog("Starting project " + projectName + " at " + url)
 					refreshProjects()
 					openPreviewWhenReady(projectDir, projectName, url, func(runErr error) {
 						fyne.Do(func() {
 							if runErr != nil {
 								projectStatus.SetText("Could not start " + projectName + ": " + runErr.Error() + ". Check .goampp-run.log.")
+								linuxAddLog("Project " + projectName + " failed to start: " + runErr.Error())
 							} else {
 								projectStatus.SetText("Running " + projectName + " at " + url + ".")
+								linuxAddLog("Project " + projectName + " is running at " + url)
 							}
 							refreshProjects()
 						})
@@ -244,10 +247,12 @@ func Run() {
 							err := stopProject(projectDir, projectName)
 							fyne.Do(func() {
 								if err != nil {
-								projectStatus.SetText("Could not stop " + projectName + ": " + err.Error())
+									projectStatus.SetText("Could not stop " + projectName + ": " + err.Error())
+									linuxAddLog("Could not stop project " + projectName + ": " + err.Error())
 									dialog.ShowError(err, w)
 								} else {
 									projectStatus.SetText("Stopped " + projectName + ".")
+									linuxAddLog("Stopped project " + projectName)
 								}
 								refreshProjects()
 							})
@@ -284,6 +289,8 @@ func Run() {
 			return
 		}
 		projectStatus.SetText("Created " + created + "  •  See README.md for run instructions.")
+		linuxAddLog("Created project " + filepath.Base(created) + " using " + templateSelect.Selected)
+		linuxSetStatus("Project created: " + filepath.Base(created))
 		projectNameEntry.SetText("")
 		refreshProjects()
 		dialog.ShowInformation("Project created", "Your starter files are ready. Open the project folder or read README.md for the next steps.", w)
@@ -462,6 +469,8 @@ func makeServiceCard(w fyne.Window, state serviceState, refresh func()) fyne.Can
 
 func runServiceAction(w fyne.Window, action *widget.Button, manager, unit, verb string, refresh func()) {
 	action.Disable()
+	linuxSetStatus(strings.Title(verb) + " service " + unit)
+	linuxAddLog(strings.Title(verb) + " service " + unit)
 	switch verb {
 	case "start":
 		action.SetText("Starting…")
@@ -472,7 +481,12 @@ func runServiceAction(w fyne.Window, action *widget.Button, manager, unit, verb 
 		err := controlUnit(manager, unit, verb)
 		fyne.Do(func() {
 			if err != nil {
+				linuxAddLog("Service " + unit + " " + verb + " failed: " + err.Error())
+				linuxSetStatus("Service action failed: " + unit)
 				dialog.ShowError(err, w)
+			} else {
+				linuxAddLog("Service " + unit + " " + verb + " completed")
+				linuxSetStatus("Service " + unit + " " + verb + " completed")
 			}
 			refresh()
 		})
