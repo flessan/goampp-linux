@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd -- "$(dirname -- "\${BASH_SOURCE[0]}")/../.." && pwd)"
-VERSION="\${VERSION:-dev}"
-VERSION_NUM="\${VERSION#v}"
+ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
+VERSION="${VERSION:-dev}"
+VERSION_NUM="${VERSION#v}"
 if [[ "$VERSION_NUM" == "dev" ]]; then
   PACKAGE_VERSION="0.0.0"
 else
   PACKAGE_VERSION="$VERSION_NUM"
 fi
-OUT="\${OUTPUT_DIR:-$ROOT/dist/packages}"
+OUT="${OUTPUT_DIR:-$ROOT/dist/packages}"
 BIN="$ROOT/dist/linux/goampp-linux"
 STAGE="$ROOT/dist/linux-bundle"
 APPDIR="$OUT/GoAMPP.AppDir"
@@ -41,7 +41,7 @@ sed "s/@VERSION@/$PACKAGE_VERSION/g" "$ROOT/packaging/linux/nfpm.yaml.in" > "$CO
 
 # AppImage uses linuxdeploy to bundle non-system shared libraries. The host's
 # display server and graphics driver remain host-provided, as required by GUI apps.
-LINUXDEPLOY="\${LINUXDEPLOY:-$OUT/linuxdeploy-x86_64.AppImage}"
+LINUXDEPLOY="${LINUXDEPLOY:-$OUT/linuxdeploy-x86_64.AppImage}"
 if [[ ! -x "$LINUXDEPLOY" ]]; then
   curl -fsSL --retry 3 \
     https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage \
