@@ -465,7 +465,7 @@ func Run() {
 			linuxBoldText("Light mode is not available yet", 12.5),
 		),
 		widget.NewLabel("Flessan, the maintainer working on this project, has not finished the light theme yet. Contributions are open on GitHub if you'd like to help build it."),
-		widget.NewButtonWithIcon("Contribute on GitHub", theme.NavigateExternalIcon(), func() {
+		widget.NewButtonWithIcon("Contribute on GitHub", theme.ComputerIcon(), func() {
 			if err := openExternal("https://github.com/flessan/goampp-linux"); err != nil {
 				dialog.ShowError(err, w)
 			}
