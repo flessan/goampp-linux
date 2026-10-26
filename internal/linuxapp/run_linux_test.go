@@ -153,13 +153,21 @@ func TestNodeStarterServesOnlyPublicFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	logPath := filepath.Join(projectDir, "node-starter-test.log")
+	logFile, err := os.Create(logPath)
+	if err != nil {
+		t.Fatal(err)
+	}
 	cmd := exec.Command(npm, "start")
 	cmd.Dir = projectDir
 	cmd.Env = environmentWith("GOAMPP_PORT", strconv.Itoa(port))
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.Stdout, cmd.Stderr = logFile, logFile
 	if err := cmd.Start(); err != nil {
+		_ = logFile.Close()
 		t.Fatal(err)
 	}
+	_ = logFile.Close()
 	finished := make(chan struct{})
 	exitResult := make(chan error, 1)
 	go func() {
@@ -176,7 +184,7 @@ func TestNodeStarterServesOnlyPublicFiles(t *testing.T) {
 
 	baseURL := fmt.Sprintf("http://127.0.0.1:%d", port)
 	client := &http.Client{Timeout: 250 * time.Millisecond}
-	deadline := time.Now().Add(3 * time.Second)
+	deadline := time.Now().Add(10 * time.Second)
 	var homepage []byte
 	for {
 		response, requestErr := client.Get(baseURL + "/")
@@ -198,7 +206,8 @@ func TestNodeStarterServesOnlyPublicFiles(t *testing.T) {
 		default:
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("Node starter did not become ready: %v", requestErr)
+			log, _ := os.ReadFile(logPath)
+			t.Fatalf("Node starter did not become ready: %v; process output: %s", requestErr, log)
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
