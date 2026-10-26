@@ -39,6 +39,8 @@ type linuxShellState struct {
 	statusDot     *canvas.Circle
 	logList       *widget.List
 	logLines      []string
+	pendingLogs   []string
+	logFlushQueued bool
 	logBody       fyne.CanvasObject
 	logTools      *fyne.Container
 	logToggle     *widget.Button
@@ -259,25 +261,46 @@ func linuxSetStatus(message string) {
 
 func linuxAddLog(message string) {
 	stamped := time.Now().Format("15:04:05") + "  " + strings.TrimRight(message, "\r\n")
-	fyne.Do(func() {
-		linuxShell.logMu.Lock()
-		linuxShell.logLines = append(linuxShell.logLines, stamped)
-		if len(linuxShell.logLines) > 2000 {
-			linuxShell.logLines = append([]string(nil), linuxShell.logLines[len(linuxShell.logLines)-1500:]...)
-		}
-		linuxShell.logMu.Unlock()
-		if linuxShell.logList != nil {
-			linuxShell.logList.Refresh()
-			if linuxShell.logFollow && len(linuxShell.logLines) > 0 {
-				linuxShell.logList.ScrollToBottom()
-			}
-		}
-		if linuxShell.statusText != nil {
-			linuxShell.statusText.SetText(message)
-		}
-	})
+	linuxShell.logMu.Lock()
+	linuxShell.pendingLogs = append(linuxShell.pendingLogs, stamped)
+	shouldQueue := !linuxShell.logFlushQueued
+	linuxShell.logFlushQueued = true
+	linuxShell.logMu.Unlock()
+	if shouldQueue {
+		fyne.Do(flushLinuxPendingLogs)
+	}
 }
 
+func flushLinuxPendingLogs() {
+	linuxShell.logMu.Lock()
+	pending := linuxShell.pendingLogs
+	linuxShell.pendingLogs = nil
+	linuxShell.logFlushQueued = false
+	if len(pending) == 0 {
+		linuxShell.logMu.Unlock()
+		return
+	}
+	linuxShell.logLines = append(linuxShell.logLines, pending...)
+	if len(linuxShell.logLines) > 2000 {
+		linuxShell.logLines = append([]string(nil), linuxShell.logLines[len(linuxShell.logLines)-1500:]...)
+	}
+	linuxShell.logMu.Unlock()
+
+	if linuxShell.logList != nil {
+		linuxShell.logList.Refresh()
+		if linuxShell.logFollow {
+			linuxShell.logList.ScrollToBottom()
+		}
+	}
+	if linuxShell.statusText != nil {
+		last := pending[len(pending)-1]
+		if parts := strings.SplitN(last, "  ", 2); len(parts) == 2 {
+			linuxShell.statusText.SetText(parts[1])
+		} else {
+			linuxShell.statusText.SetText(last)
+		}
+	}
+}
 func linuxLogColor(line string) color.Color {
 	lower := strings.ToLower(line)
 	switch {
