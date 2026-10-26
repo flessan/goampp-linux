@@ -22,17 +22,18 @@ A native desktop web-stack control panel written in Go. On Windows, GoAMPP ships
 - **System tray** with close-to-tray and launch-with-Windows
 - **Built-in config editor** (Ctrl+S to save), **"Add tools to PATH"**, **startup service selection**, **zombie process sweep** at launch
 
-### Linux (initial native support)
+### Linux (native support)
 
-- Native Fyne desktop entry point for Linux, separate from the Windows build
-- Per-user installer, `.desktop` launcher, application icon, and uninstall script
-- Detects common web servers, PHP-FPM, databases, Redis, RabbitMQ, and developer runtimes already installed on the host
-- Starts and stops detected systemd, OpenRC, or SysV init services when the current user is authorized to control them
-- Detects common development tools such as PHP, Composer, Node.js, Python, Go, Java, Rust, and Git
-- Opens the local projects directory and `http://localhost/`; provides a copyable package-manager install command for common distributions
-- Uses distribution-managed packages rather than downloading Windows binaries; package installation remains an explicit user action
+- Native desktop dashboard with System, Light, and Dark appearances, searchable service/runtime cards, status activity, and in-app project logs
+- Detects common web servers, PHP-FPM, databases, Redis, RabbitMQ, and developer runtimes installed by the host distribution
+- Starts/stops detected systemd, OpenRC, or SysV init services when the current account is authorized
+- Config Editor can open common service configs or any text file; saves use an atomic replacement and a timestamped backup in the user cache. System files still require the permissions needed by the OS
+- Virtual Hosts stores local host definitions, validates domains and document roots, and generates Apache/Nginx snippets and `/etc/hosts` mappings for review/copying. It does **not** silently edit system files or reload a server
+- Startup page inspects boot-start state and can enable/disable services through systemd, OpenRC, or SysV init; privileged changes may require administrator authorization
 - Creates starter projects for Static HTML, PHP, Node.js HTTP, Go net/http, and Python HTTP, with README instructions and loopback-only sample servers where applicable
-- **Not yet available on Linux:** GoAMPP's downloadable package catalog, version switching, Windows hosts-file elevation workflow, full virtual-host editor, and framework scaffolding integration
+- Uses distribution-managed packages rather than downloading Windows binaries; installing system packages remains an explicit user action
+- Linux x86-64 releases provide `.AppImage`, `.deb`, `.rpm`, and `.tar.gz` downloads
+- **Still not ported:** GoAMPP's downloadable package catalog, automatic runtime/version switching, automatic system-wide virtual-host/hosts-file deployment, Windows elevation workflow, and framework scaffolding integrations
 
 ## Screenshots
 
@@ -75,14 +76,16 @@ A portable `goampp-vX.Y.Z-windows-amd64.zip` is published next to the installer.
 
 ## Install on Linux
 
-Download the `goampp-vX.Y.Z-linux-amd64.tar.gz` archive from the [Releases page](https://github.com/flessan/goampp-linux/releases/latest), replacing `X.Y.Z` with the published version. Extract the complete archive, then run the installer from the extracted directory:
+Choose the package matching your distribution from the [Releases page](https://github.com/flessan/goampp-linux/releases/latest). Published assets are direct downloads, not a `.zip` wrapper:
 
-```bash
-tar -xzf goampp-vX.Y.Z-linux-amd64.tar.gz
-sh ./install.sh
-```
+- **AppImage:** `chmod +x goampp-vX.Y.Z-linux-amd64.AppImage && ./goampp-vX.Y.Z-linux-amd64.AppImage`
+- **Debian, Ubuntu, Linux Mint:** `sudo apt install ./goampp-vX.Y.Z-linux-amd64.deb`
+- **Fedora, RHEL-compatible distributions:** `sudo dnf install ./goampp-vX.Y.Z-linux-amd64.rpm`
+- **Portable archive / per-user install:** extract the `.tar.gz` and run `sh ./install.sh`
 
-This installs the binary, desktop menu entry, and application icon for the current user. To remove the application later, run `sh ./uninstall.sh` from the extracted directory. The uninstaller preserves your projects in `~/GoAMPP/www`.
+The `.deb` and `.rpm` packages install the binary, desktop entry, and icon system-wide. The AppImage bundles most application libraries, but the host still supplies its display server and graphics driver. The archive installer registers GoAMPP for the current user. To remove that per-user installation, run `sh ./uninstall.sh` from the extracted archive; it preserves your projects in `~/GoAMPP/www`.
+
+GitHub Actions automatically wraps workflow artifacts in a downloadable ZIP. Those are CI previews; release downloads above are published as individual `.AppImage`, `.deb`, `.rpm`, and `.tar.gz` files.
 
 ## First run (Windows)
 
@@ -128,12 +131,23 @@ sudo apt install build-essential libgl1-mesa-dev xorg-dev libwayland-dev wayland
 
 git clone https://github.com/flessan/goampp-linux
 cd goampp-linux
-mkdir -p dist
-go build -trimpath -o dist/goampp-linux .
-./dist/goampp-linux
+mkdir -p dist/linux
+go build -trimpath -o dist/linux/goampp-linux .
+./dist/linux/goampp-linux
 ```
 
-On other distributions, install the equivalent compiler, OpenGL, X11, Wayland, xkbcommon, Wayland protocols, and libdecor development packages. Windows packaging scripts are not used for the native Linux panel. Published releases also include a prebuilt Linux x86-64 archive named `goampp-<version>-linux-amd64.tar.gz`. Extract the archive and run `sh ./install.sh` to install GoAMPP for your user, add it to your desktop application menu, and register its icon. To launch without installing, run `./goampp-linux`. Run `sh ./uninstall.sh` to remove the app launcher and binary; project files in `~/GoAMPP/www` are kept.
+To create the four Linux distribution assets locally, install the packaging helper and run the release packaging script:
+
+```bash
+sudo apt install file desktop-file-utils patchelf curl
+go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.41.3
+export PATH="$(go env GOPATH)/bin:$PATH"
+VERSION=dev bash packaging/linux/package.sh
+```
+
+The script writes `.AppImage`, `.deb`, `.rpm`, and `.tar.gz` files under `dist/packages/`. AppImage generation downloads the upstream linuxdeploy tool. On other distributions, install the equivalent compiler, OpenGL, X11, Wayland, xkbcommon, Wayland protocols, and libdecor development packages. The AppImage is built for x86-64; other CPU architectures need their own builds.
+
+The project does not yet publish a macOS `.dmg`: that requires a native macOS build target and validation on macOS. The existing Windows pipeline continues to publish its setup `.exe` and portable `.zip`.
 
 Run the tests with `go test ./...`. On Windows, `GOAMPP_SNAPSHOT=<dir> go test ./internal/gui -run Snapshots` renders every Windows page to PNG without a desktop session.
 
