@@ -52,8 +52,12 @@ fi
 rm -rf "$APPDIR"
 mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/share/applications" "$APPDIR/usr/share/icons/hicolor/512x512/apps"
 install -m 0755 "$BIN" "$APPDIR/usr/bin/goampp"
-install -m 0644 "$ROOT/assets/logo.png" "$APPDIR/usr/share/icons/hicolor/512x512/apps/goampp.png"
-install -m 0644 "$ROOT/assets/logo.png" "$APPDIR/goampp.png"
+if ! command -v convert >/dev/null 2>&1; then
+  echo "ImageMagick 'convert' is required to generate standard-size AppImage icons." >&2
+  exit 1
+fi
+convert "$ROOT/assets/logo.png" -resize 512x512\! "$APPDIR/usr/share/icons/hicolor/512x512/apps/goampp.png"
+install -m 0644 "$APPDIR/usr/share/icons/hicolor/512x512/apps/goampp.png" "$APPDIR/goampp.png"
 sed 's/^Exec=.*/Exec=AppRun/' "$ROOT/packaging/linux/goampp.desktop" > "$APPDIR/goampp.desktop"
 install -m 0644 "$APPDIR/goampp.desktop" "$APPDIR/usr/share/applications/goampp.desktop"
 cat > "$APPDIR/AppRun" <<'APPRUN'
