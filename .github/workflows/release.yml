@@ -248,25 +248,32 @@ jobs:
           go vet ./...
           go test ./... -count=1
 
-      - name: Build Linux binary and archive
+      - name: Install nfpm
+        run: |
+          go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.41.3
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Build Linux binary
         run: |
           mkdir -p dist/linux
           go build -trimpath -ldflags="-s -w" -o dist/linux/goampp-linux .
-          cp README.md packaging/linux/goampp.desktop packaging/linux/install.sh packaging/linux/uninstall.sh dist/linux/
-          cp assets/logo.png dist/linux/logo.png
-          chmod +x dist/linux/install.sh dist/linux/uninstall.sh
-          tar -czf "$GITHUB_WORKSPACE/goampp-${VERSION}-linux-amd64.tar.gz" -C dist/linux goampp-linux README.md goampp.desktop install.sh uninstall.sh logo.png
 
-      - name: Upload build artifact
+      - name: Build Linux distributions
+        run: |
+          bash -n packaging/linux/package.sh
+          bash packaging/linux/package.sh
+
+      - name: Upload Linux preview distributions
         if: env.VERSION == 'dev'
         uses: actions/upload-artifact@v7
         with:
-          name: goampp-${{ env.VERSION }}-linux-amd64
-          path: goampp-*-linux-amd64.tar.gz
+          name: goampp-dev-linux-distributions
+          path: dist/packages/goampp-dev-linux-amd64.*
           if-no-files-found: error
 
-      - name: Publish Linux release asset
+      - name: Publish Linux release assets
         if: env.VERSION != 'dev'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$VERSION" "goampp-$VERSION-linux-amd64.tar.gz" --clobber
+        run: |
+          gh release upload "$VERSION" "dist/packages/goampp-$VERSION-linux-amd64.tar.gz" "dist/packages/goampp-$VERSION-linux-amd64.AppImage" "dist/packages/goampp-$VERSION-linux-amd64.deb" "dist/packages/goampp-$VERSION-linux-amd64.rpm" --clobber
