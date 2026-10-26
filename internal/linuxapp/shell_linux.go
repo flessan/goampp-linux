@@ -398,7 +398,7 @@ func linuxSameColor(left, right color.Color) bool {
 	return l == r
 }
 
-func linuxRecolorColor(current color.Color, allowPrimary bool) color.Color {
+func linuxRecolorColor(current color.Color, role string) color.Color {
 	pairs := []struct {
 		dark, light color.Color
 		name         fyne.ThemeColorName
@@ -428,8 +428,19 @@ func linuxRecolorColor(current color.Color, allowPrimary bool) color.Color {
 		{linuxDarkPalette.disabledBtn, linuxLightPalette.disabledBtn, theme.ColorNameDisabledButton},
 	}
 	for _, pair := range pairs {
-		if pair.name == theme.ColorNamePrimary && !allowPrimary {
-			continue
+		switch role {
+		case "text":
+			if pair.name != theme.ColorNameForeground &&
+				pair.name != linuxColorMuted &&
+				pair.name != theme.ColorNamePrimary &&
+				pair.name != theme.ColorNamePlaceHolder &&
+				pair.name != theme.ColorNameDisabled {
+				continue
+			}
+		case "accent":
+			if pair.name != theme.ColorNamePrimary {
+				continue
+			}
 		}
 		if linuxSameColor(current, pair.dark) || linuxSameColor(current, pair.light) {
 			return theme.Color(pair.name)
@@ -437,20 +448,19 @@ func linuxRecolorColor(current color.Color, allowPrimary bool) color.Color {
 	}
 	return current
 }
-
 func linuxRecolorObject(obj fyne.CanvasObject) {
 	switch item := obj.(type) {
 	case *linuxNavItem:
 		item.applyState()
 	case *canvas.Rectangle:
-		item.FillColor = linuxRecolorColor(item.FillColor, false)
-		item.StrokeColor = linuxRecolorColor(item.StrokeColor, false)
+		item.FillColor = linuxRecolorColor(item.FillColor, "surface")
+		item.StrokeColor = linuxRecolorColor(item.StrokeColor, "surface")
 		item.Refresh()
 	case *canvas.Text:
-		item.Color = linuxRecolorColor(item.Color, true)
+		item.Color = linuxRecolorColor(item.Color, "text")
 		item.Refresh()
 	case *canvas.Circle:
-		item.FillColor = linuxRecolorColor(item.FillColor, true)
+		item.FillColor = linuxRecolorColor(item.FillColor, "accent")
 		item.Refresh()
 	case *fyne.Container:
 		for _, child := range item.Objects {
