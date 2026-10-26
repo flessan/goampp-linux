@@ -263,12 +263,36 @@ jobs:
           bash -n packaging/linux/package.sh
           bash packaging/linux/package.sh
 
-      - name: Upload Linux preview distributions
+      - name: Upload Linux AppImage preview
         if: env.VERSION == 'dev'
         uses: actions/upload-artifact@v7
         with:
-          name: goampp-dev-linux-distributions
-          path: dist/packages/goampp-dev-linux-amd64.*
+          name: goampp-dev-linux-appimage
+          path: dist/packages/goampp-dev-linux-amd64.AppImage
+          if-no-files-found: error
+
+      - name: Upload Linux Debian package preview
+        if: env.VERSION == 'dev'
+        uses: actions/upload-artifact@v7
+        with:
+          name: goampp-dev-linux-deb
+          path: dist/packages/goampp-dev-linux-amd64.deb
+          if-no-files-found: error
+
+      - name: Upload Linux RPM package preview
+        if: env.VERSION == 'dev'
+        uses: actions/upload-artifact@v7
+        with:
+          name: goampp-dev-linux-rpm
+          path: dist/packages/goampp-dev-linux-amd64.rpm
+          if-no-files-found: error
+
+      - name: Upload Linux portable archive preview
+        if: env.VERSION == 'dev'
+        uses: actions/upload-artifact@v7
+        with:
+          name: goampp-dev-linux-tar-gz
+          path: dist/packages/goampp-dev-linux-amd64.tar.gz
           if-no-files-found: error
 
       - name: Publish Linux release assets
