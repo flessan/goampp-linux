@@ -293,9 +293,9 @@ func Run() {
 				nameLabel := widget.NewLabelWithStyle(projectName, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
 				pathLabel := widget.NewLabel(filepath.Join(projectDir, projectName))
 				pathLabel.Wrapping = fyne.TextWrapBreak
-				projectDetails := container.NewVBox(nameLabel, pathLabel)
-				projectIdentity := container.NewHBox(linuxLetterMark(projectName, 38), linuxHGap(10), projectDetails)
-				projectRow := container.NewBorder(nil, nil, projectIdentity, container.NewHBox(actions...), linuxGap(1))
+				projectIdentity := container.NewHBox(linuxLetterMark(projectName, 38), linuxHGap(10), nameLabel)
+				projectHeader := container.NewBorder(nil, nil, projectIdentity, container.NewHBox(actions...), linuxGap(1))
+				projectRow := container.NewVBox(projectHeader, linuxPad(pathLabel, 4, 0, 48, 0))
 				projectList.Add(linuxSurface(projectRow, 8, 8, 10, 10))
 				projectList.Add(linuxGap(8))
 			}
@@ -519,10 +519,11 @@ func makeServiceCard(w fyne.Window, state serviceState, refresh func()) fyne.Can
 	}
 	detailLabel := widget.NewLabel(detail)
 	detailLabel.Wrapping = fyne.TextWrapBreak
-	info := container.NewVBox(
-		widget.NewLabelWithStyle(state.Definition.Name, fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		linuxStatusBadge(status, statusAccent),
-		detailLabel,
+	titleLabel := widget.NewLabelWithStyle(state.Definition.Name, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+	heading := container.NewHBox(
+		linuxImage(linuxServiceResource(state.Definition.Name), 38, state.Definition.Name),
+		linuxHGap(10),
+		container.NewVBox(titleLabel, linuxStatusBadge(status, statusAccent)),
 	)
 	var action *widget.Button
 	action = widget.NewButtonWithIcon("Start", theme.MediaPlayIcon(), func() {
@@ -548,12 +549,9 @@ func makeServiceCard(w fyne.Window, state serviceState, refresh func()) fyne.Can
 			action.Disable()
 		}
 	}
-	identity := container.NewHBox(
-		linuxImage(linuxServiceResource(state.Definition.Name), 38, state.Definition.Name),
-		linuxHGap(10),
-		info,
-	)
-	return linuxSurface(container.NewBorder(nil, nil, identity, action, linuxGap(1)), 10, 10, 12, 12)
+	header := container.NewBorder(nil, nil, heading, action, linuxGap(1))
+	details := linuxPad(detailLabel, 0, 0, 48, 0)
+	return linuxSurface(container.NewVBox(header, details), 10, 10, 12, 12)
 }
 
 
