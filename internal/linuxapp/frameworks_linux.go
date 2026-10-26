@@ -56,6 +56,21 @@ var linuxFrameworkByNameMap = func() map[string]linuxFrameworkRecipe {
 	return out
 }()
 
+func linuxProjectTemplateNames() []string {
+	names := projectTemplateNames()
+	seen := make(map[string]struct{}, len(names))
+	for _, name := range names {
+		seen[name] = struct{}{}
+	}
+	for _, name := range linuxFrameworkNames() {
+		if _, ok := seen[name]; !ok {
+			names = append(names, name)
+			seen[name] = struct{}{}
+		}
+	}
+	return names
+}
+
 func linuxFrameworkNames() []string {
 	names := make([]string, 0, len(linuxFrameworkRecipes))
 	for _, recipe := range linuxFrameworkRecipes {
