@@ -1,13 +1,15 @@
 # GoAMPP
 
-A native Windows web-stack control panel written in Go. **One self-contained `goampp.exe`** that downloads Apache, MariaDB, PHP, PostgreSQL, Redis, RabbitMQ, Mailpit, Node.js, Python, Go, Java, and friends on demand — no installer bloat, no Docker, no WSL, no Electron.
+A native desktop web-stack control panel written in Go. On Windows, GoAMPP ships as **one self-contained `goampp.exe`** and downloads development tools on demand. On Linux, the initial native desktop port integrates with services and developer tools installed by your distribution, using systemd, OpenRC, or SysV init when available. Linux support is an early native mode and does not yet have full feature parity with Windows.
 
-[![release](https://img.shields.io/github/v/release/imtaqin/goampp)](https://github.com/imtaqin/goampp/releases/latest)
-[![license](https://img.shields.io/github/license/imtaqin/goampp)](LICENSE)
+[![release](https://img.shields.io/github/v/release/flessan/goampp-linux)](https://github.com/flessan/goampp-linux/releases/latest)
+[![license](https://img.shields.io/github/license/flessan/goampp-linux)](LICENSE)
 
 ![GoAMPP services dashboard](assets/image/services.png)
 
 ## Features
+
+### Windows
 
 - **29 packages** in the catalog — Apache, Nginx, MariaDB (as MySQL), PostgreSQL, Redis, PHP, phpMyAdmin, Adminer, pgweb, Mailpit, RabbitMQ, Composer, and language runtimes from Node.js and Python to Go, Java, Rust, Zig and Elixir
 - **Always the latest build** — every package resolves its newest release at install time from the official source (php.net, nodejs.org, MariaDB, Apache Lounge, GitHub releases, …), then falls back to the pinned URL and known archive mirrors when a link has gone 404
@@ -19,6 +21,18 @@ A native Windows web-stack control panel written in Go. **One self-contained `go
 - **Fyne GUI** — compact list layout, light/dark theme that follows Windows, live activity log, per-package install progress
 - **System tray** with close-to-tray and launch-with-Windows
 - **Built-in config editor** (Ctrl+S to save), **"Add tools to PATH"**, **startup service selection**, **zombie process sweep** at launch
+
+### Linux (initial native support)
+
+- Native Fyne desktop entry point for Linux, separate from the Windows build
+- Per-user installer, `.desktop` launcher, application icon, and uninstall script
+- Detects common web servers, PHP-FPM, databases, Redis, RabbitMQ, and developer runtimes already installed on the host
+- Starts and stops detected systemd, OpenRC, or SysV init services when the current user is authorized to control them
+- Detects common development tools such as PHP, Composer, Node.js, Python, Go, Java, Rust, and Git
+- Opens the local projects directory and `http://localhost/`; provides a copyable package-manager install command for common distributions
+- Uses distribution-managed packages rather than downloading Windows binaries; package installation remains an explicit user action
+- Creates starter projects for Static HTML, PHP, Node.js HTTP, Go net/http, and Python HTTP, with README instructions and loopback-only sample servers where applicable
+- **Not yet available on Linux:** GoAMPP's downloadable package catalog, version switching, Windows hosts-file elevation workflow, full virtual-host editor, and framework scaffolding integration
 
 ## Screenshots
 
@@ -47,9 +61,9 @@ Theme, paths, PATH tools and about.
 
 ![Settings page](assets/image/settings.png)
 
-## Install
+## Install on Windows
 
-Grab the latest installer from the [Releases page](https://github.com/imtaqin/goampp/releases/latest):
+Grab the latest installer from the [Releases page](https://github.com/flessan/goampp-linux/releases/latest):
 
 ```
 goampp-setup-X.Y.Z.exe
@@ -59,26 +73,69 @@ Installs to **`C:\goampp`** — the short path matches the XAMPP / Laragon conve
 
 A portable `goampp-vX.Y.Z-windows-amd64.zip` is published next to the installer.
 
-## First run
+## Install on Linux
+
+Download the `goampp-vX.Y.Z-linux-amd64.tar.gz` archive from the [Releases page](https://github.com/flessan/goampp-linux/releases/latest), replacing `X.Y.Z` with the published version. Extract the complete archive, then run the installer from the extracted directory:
+
+```bash
+tar -xzf goampp-vX.Y.Z-linux-amd64.tar.gz
+sh ./install.sh
+```
+
+This installs the binary, desktop menu entry, and application icon for the current user. To remove the application later, run `sh ./uninstall.sh` from the extracted directory. The uninstaller preserves your projects in `~/GoAMPP/www`.
+
+## First run (Windows)
 
 1. **Click Install on any row** — GoAMPP downloads and extracts that package on the fly.
 2. **Click "Start stack"** in the sidebar to install and boot the essential web stack (Apache or Nginx + PHP + MariaDB + phpMyAdmin) in one go.
 3. **Open <http://localhost/phpmyadmin/>** — login as `root` with no password.
 4. **Go to Projects** to scaffold a Laravel/Symfony/Express/Flask/Django/etc. project with its own `.test` domain.
 
+## Linux native mode
+
+Linux GoAMPP detects packages installed by your Linux distribution and can control available systemd, OpenRC, or SysV init services. Install only the components you need using your distribution's package manager first. GoAMPP does not request administrator privileges or install system packages automatically.
+
+On Debian/Ubuntu, for example:
+
+```bash
+sudo apt install apache2 nginx php-fpm mariadb-server postgresql redis-server php-cli composer nodejs npm python3 python3-pip golang-go default-jdk
+```
+
+On Arch Linux, common equivalents are available through `pacman`; Fedora uses `dnf`. Package names and service unit names vary by distribution. Start/stop actions may require authorization from your system's service manager.
+
+Open the **Services** tab to detect services, **Developer tools** to inspect runtimes, and **Projects** to open `~/GoAMPP/www` or `http://localhost/`. In **Projects**, choose a name and template, then select **Create project**. GoAMPP refuses unsafe names and existing directories and does not run dependency installers automatically. Each generated project includes a `README.md`; use its **Run** action to start the local development server, open the preview, and use **Stop** to terminate the process group. The Run action chooses an available local port for each launch to reduce port conflicts; the generated Node.js, Go, Static HTML, and Python HTTP servers read `GOAMPP_PORT`, while PHP receives its assigned port through the PHP server CLI arguments. Servers bind to `127.0.0.1` by default. All five starter templates serve from `public/`, keeping project-root files such as `README.md` and `.goampp-run.log` outside the document root. All five starter servers reject symlinks that resolve outside `public/`; the Static HTML, Node.js, Go, and Python HTTP servers also refuse to start if `public/` itself is a symlink, while the PHP router responds with HTTP 403. Output is appended to `.goampp-run.log` in the project directory. Closing GoAMPP stops any servers it started.
+
 ## Build from source
+
+### Windows
 
 Requires **Go 1.27+ (64-bit)** and a **MinGW-w64 `gcc`** on `PATH` — the Fyne GUI uses cgo. MSYS2's `mingw64` or `winget install BrechtSanders.WinLibs.POSIX.UCRT` both work.
 
 ```cmd
-git clone https://github.com/imtaqin/goampp
-cd goampp
+git clone https://github.com/flessan/goampp-linux
+cd goampp-linux
 build.bat 1.2.3
 ```
 
-`build.bat` embeds the icon, manifest and version info with [go-winres](https://github.com/tc-hib/go-winres) and builds a single `goampp.exe`. Logos and icons are compiled in, so the only thing that sits next to it is `runtime/` (the VC++ DLLs PostgreSQL needs). `build-installer.bat 1.2.3` also builds the Inno Setup installer into `dist/`.
+`build.bat` embeds the icon, manifest and version info with [go-winres](https://github.com/tc-hib/go-winres) and builds a single `goampp.exe`. The Windows portable bundle ships with `runtime/` for PostgreSQL's VC++ runtime dependency. `build-installer.bat 1.2.3` also builds the Inno Setup installer into `dist/`.
 
-Run the tests with `go test ./...`. `GOAMPP_SNAPSHOT=<dir> go test ./internal/gui -run Snapshots` renders every page to PNG without a desktop session.
+### Linux
+
+Requires **Go 1.27+**, `gcc`, and the system development libraries needed by Fyne/GLFW. On Debian/Ubuntu:
+
+```bash
+sudo apt install build-essential libgl1-mesa-dev xorg-dev libwayland-dev wayland-protocols libxkbcommon-dev libxkbcommon-x11-dev libdecor-0-dev
+
+git clone https://github.com/flessan/goampp-linux
+cd goampp-linux
+mkdir -p dist
+go build -trimpath -o dist/goampp-linux .
+./dist/goampp-linux
+```
+
+On other distributions, install the equivalent compiler, OpenGL, X11, Wayland, xkbcommon, Wayland protocols, and libdecor development packages. Windows packaging scripts are not used for the native Linux panel. Published releases also include a prebuilt Linux x86-64 archive named `goampp-<version>-linux-amd64.tar.gz`. Extract the archive and run `sh ./install.sh` to install GoAMPP for your user, add it to your desktop application menu, and register its icon. To launch without installing, run `./goampp-linux`. Run `sh ./uninstall.sh` to remove the app launcher and binary; project files in `~/GoAMPP/www` are kept.
+
+Run the tests with `go test ./...`. On Windows, `GOAMPP_SNAPSHOT=<dir> go test ./internal/gui -run Snapshots` renders every Windows page to PNG without a desktop session.
 
 ## Project layout
 
@@ -163,7 +220,7 @@ The data directory wasn't seeded. The post-install hook normally runs `mariadb-i
 
 ## Contributing
 
-Issues and pull requests welcome at [github.com/imtaqin/goampp](https://github.com/imtaqin/goampp).
+Issues and pull requests welcome at [github.com/flessan/goampp-linux](https://github.com/flessan/goampp-linux).
 
 If a download URL in `download.go` goes stale, file an issue with the service name and I'll bump the catalog. The service URLs use whatever upstream publishes (Apache Lounge for Apache, archive.mariadb.org for MariaDB, etc.) so they age out over time.
 

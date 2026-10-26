@@ -218,3 +218,55 @@ jobs:
             gh release create $env:VERSION --title "GoAMPP $env:VERSION" --generate-notes
           }
           gh release upload $env:VERSION "goampp-$env:VERSION-windows-amd64.zip" (Get-Item dist/goampp-setup-*.exe).FullName --clobber
+
+  release-linux:
+    needs: [tag, release]
+    if: >-
+      !cancelled() && needs.tag.result != 'failure' &&
+      needs.release.result == 'success' &&
+      (github.ref_type != 'branch' || github.event_name == 'workflow_dispatch' || needs.tag.outputs.version != '')
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.tag.outputs.version || (github.ref_type == 'tag' && github.ref_name) || 'dev' }}
+      CGO_ENABLED: "1"
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install Fyne/GLFW system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libgl1-mesa-dev xorg-dev libwayland-dev wayland-protocols libxkbcommon-dev libxkbcommon-x11-dev libdecor-0-dev
+
+      - name: Vet and test
+        run: |
+          go vet ./...
+          go test ./... -count=1
+
+      - name: Build Linux binary and archive
+        run: |
+          mkdir -p dist/linux
+          go build -trimpath -ldflags="-s -w" -o dist/linux/goampp-linux .
+          cp README.md packaging/linux/goampp.desktop packaging/linux/install.sh packaging/linux/uninstall.sh dist/linux/
+          cp assets/logo.png dist/linux/logo.png
+          chmod +x dist/linux/install.sh dist/linux/uninstall.sh
+          tar -czf "$GITHUB_WORKSPACE/goampp-${VERSION}-linux-amd64.tar.gz" -C dist/linux goampp-linux README.md goampp.desktop install.sh uninstall.sh logo.png
+
+      - name: Upload build artifact
+        if: env.VERSION == 'dev'
+        uses: actions/upload-artifact@v7
+        with:
+          name: goampp-${{ env.VERSION }}-linux-amd64
+          path: goampp-*-linux-amd64.tar.gz
+          if-no-files-found: error
+
+      - name: Publish Linux release asset
+        if: env.VERSION != 'dev'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$VERSION" "goampp-$VERSION-linux-amd64.tar.gz" --clobber
