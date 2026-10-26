@@ -159,11 +159,11 @@ func createLinuxFrameworkProject(root, name string, recipe linuxFrameworkRecipe,
 	}
 	if recipe.Name == "NestJS" {
 		if err := pinNestToLoopback(target); err != nil {
-			_, _ = fmt.Fprintf(logFile, "\\n[GoAMPP] loopback binding setup failed: %v\\n", err)
+			_, _ = fmt.Fprintf(logFile, "\n[GoAMPP] loopback binding setup failed: %v\n", err)
 			return target, err
 		}
 	}
-	if err := atomicWriteLinuxFile(filepath.Join(target, ".goampp-framework"), []byte(recipe.Name+"\\n"), 0o600); err != nil {
+	if err := atomicWriteLinuxFile(filepath.Join(target, ".goampp-framework"), []byte(recipe.Name+"\n"), 0o600); err != nil {
 		return target, fmt.Errorf("save GoAMPP framework metadata: %w", err)
 	}
 	_ = logFile.Sync()
@@ -210,11 +210,11 @@ func pinNestToLoopback(root string) error {
 	if err != nil {
 		return fmt.Errorf("pin NestJS to localhost: read src/main.ts: %w", err)
 	}
-	lines := strings.Split(string(data), "\\n")
+	lines := strings.Split(string(data), "\n")
 	changed := false
 	for i, line := range lines {
 		if strings.Contains(line, "await app.listen(") {
-			indent := line[:len(line)-len(strings.TrimLeft(line, " \\t"))]
+			indent := line[:len(line)-len(strings.TrimLeft(line, " \t"))]
 			lines[i] = indent + "await app.listen(Number(process.env.PORT ?? process.env.GOAMPP_PORT ?? 3000), '127.0.0.1');"
 			changed = true
 		}
@@ -222,7 +222,7 @@ func pinNestToLoopback(root string) error {
 	if !changed {
 		return fmt.Errorf("pin NestJS to localhost: could not locate the expected await app.listen(...) in src/main.ts; the project was not registered as runnable")
 	}
-	return atomicWriteLinuxFile(path, []byte(strings.Join(lines, "\\n")), 0o644)
+	return atomicWriteLinuxFile(path, []byte(strings.Join(lines, "\n")), 0o644)
 }
 
 func downloadLinuxFrameworkZip(rawURL, root, stripTop string, log func(string)) error {
