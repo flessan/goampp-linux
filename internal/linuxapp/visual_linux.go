@@ -154,6 +154,14 @@ func linuxPad(obj fyne.CanvasObject, top, bottom, left, right float32) fyne.Canv
 	return container.New(layout.NewCustomPaddedLayout(top, bottom, left, right), obj)
 }
 
+func linuxSurface(content fyne.CanvasObject, top, bottom, left, right float32) fyne.CanvasObject {
+	bg := canvas.NewRectangle(theme.Color(theme.ColorNameInputBackground))
+	bg.CornerRadius = 12
+	bg.StrokeColor = theme.Color(theme.ColorNameSeparator)
+	bg.StrokeWidth = 1
+	return container.NewStack(bg, linuxPad(content, top, bottom, left, right))
+}
+
 func linuxGap(height float32) fyne.CanvasObject {
 	gap := canvas.NewRectangle(color.Transparent)
 	gap.SetMinSize(fyne.NewSize(1, height))
@@ -166,5 +174,5 @@ func linuxPageIntro(title, subtitle string, icon fyne.Resource) fyne.CanvasObjec
 		widget.NewLabelWithStyle(title, fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewLabel(subtitle),
 	)
-	return widget.NewCard("", "", linuxPad(container.NewHBox(iconView, linuxGap(1), heading), 4, 4, 4, 4))
+	return linuxSurface(container.NewHBox(iconView, linuxGap(1), heading), 10, 10, 12, 12)
 }
