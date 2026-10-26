@@ -152,7 +152,7 @@ func buildLinuxSidebar() fyne.CanvasObject {
 		container.New(layout.NewCustomPaddedLayout(0, 0, 5, 0), linuxMutedText("LINUX NATIVE MODE", 10.5)),
 		linuxMutedText("Distribution-managed services", 10.5),
 		linuxVSpace(4),
-		linuxMutedText("GoAMPP preview", 10),
+		linuxMutedText(linuxVersionLabel(), 10),
 	)
 	bg := canvas.NewRectangle(theme.Color(linuxColorSidebar))
 	edge := canvas.NewRectangle(theme.Color(theme.ColorNameSeparator))
@@ -372,10 +372,12 @@ func linuxSectionLabel(value string) fyne.CanvasObject {
 
 func linuxInfoPage(title, body string, icon fyne.Resource) fyne.CanvasObject {
 	iconView := container.NewGridWrap(fyne.NewSize(34, 34), widget.NewIcon(icon))
+	description := widget.NewLabel(body)
+	description.Wrapping = fyne.TextWrapWord
 	content := container.NewVBox(
 		container.NewHBox(iconView, linuxHSpace(10), linuxBoldText(title, 14)),
 		linuxVSpace(8),
-		widget.NewLabel(body),
+		description,
 	)
 	return container.NewVScroll(linuxPad(linuxSurface(content, 14, 14, 14, 14), 10, 10, 12, 12))
 }
