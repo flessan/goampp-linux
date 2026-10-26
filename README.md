@@ -30,10 +30,11 @@ A native desktop web-stack control panel written in Go. On Windows, GoAMPP ships
 - Config Editor can open common service configs or any text file; saves use an atomic replacement and a timestamped backup in the user cache. System files still require the permissions needed by the OS
 - Virtual Hosts stores local host definitions, validates domains and document roots, and generates Apache/Nginx snippets and `/etc/hosts` mappings for review/copying. It does **not** silently edit system files or reload a server
 - Startup page inspects boot-start state and can enable/disable services through systemd, OpenRC, or SysV init; privileged changes may require administrator authorization
-- Creates starter projects for Static HTML, PHP, Node.js HTTP, Go net/http, and Python HTTP, with README instructions and loopback-only sample servers where applicable
+- Creates starter projects for Static HTML, PHP, Node.js HTTP, Go net/http, and Python HTTP, plus framework recipes for Laravel, Livewire, Symfony, CodeIgniter, WordPress, Next.js, Vite + React, Express, NestJS, AdonisJS, Flask, Django, FastAPI, Gin, and Spring Boot
+- Runs framework generators in the background, writes their output to project Logs, creates Python virtual environments locally for Python frameworks, and registers only known framework names for safe Run/Stop handling
 - Uses distribution-managed packages rather than downloading Windows binaries; installing system packages remains an explicit user action
 - Linux x86-64 releases provide `.AppImage`, `.deb`, `.rpm`, and `.tar.gz` downloads
-- **Still not ported:** GoAMPP's downloadable package catalog, automatic runtime/version switching, automatic system-wide virtual-host/hosts-file deployment, Windows elevation workflow, and framework scaffolding integrations
+- **Still not at full Windows parity:** GoAMPP's downloadable binary package catalog, automatic runtime/version switching, automatic system-wide virtual-host/hosts-file deployment, and Windows elevation workflow
 
 ## Screenshots
 
@@ -106,7 +107,7 @@ sudo apt install apache2 nginx php-fpm mariadb-server postgresql redis-server ph
 
 On Arch Linux, common equivalents are available through `pacman`; Fedora uses `dnf`. Package names and service unit names vary by distribution. Start/stop actions may require authorization from your system's service manager.
 
-Open the **Services** tab to detect services, **Developer tools** to inspect runtimes, and **Projects** to open `~/GoAMPP/www` or `http://localhost/`. In **Projects**, choose a name and template, then select **Create project**. GoAMPP refuses unsafe names and existing directories and does not run dependency installers automatically. Each generated project includes a `README.md`; use its **Run** action to start the local development server, open the preview, and use **Stop** to terminate the process group. The Run action chooses an available local port for each launch to reduce port conflicts; the generated Node.js, Go, Static HTML, and Python HTTP servers read `GOAMPP_PORT`, while PHP receives its assigned port through the PHP server CLI arguments. Servers bind to `127.0.0.1` by default. All five starter templates serve from `public/`, keeping project-root files such as `README.md` and `.goampp-run.log` outside the document root. All five starter servers reject symlinks that resolve outside `public/`; the Static HTML, Node.js, Go, and Python HTTP servers also refuse to start if `public/` itself is a symlink, while the PHP router responds with HTTP 403. Output is appended to `.goampp-run.log` in the project directory. Closing GoAMPP stops any servers it started.
+Open the **Services** tab to detect services, **Developer tools** to inspect runtimes, and **Projects** to open `~/GoAMPP/www` or `http://localhost/`. In **Projects**, choose a name and template, then select **Create project**. GoAMPP refuses unsafe names and existing directories. Framework recipes run their documented CLI commands only after you explicitly choose the framework and click **Create project**; they can download project dependencies, but GoAMPP does not silently install system packages or request administrator privileges. Each generated project includes a `README.md`; use its **Run** action to start the local development server, open the preview, and use **Stop** to terminate the process group. The Run action chooses an available local port for each launch to reduce port conflicts; the generated Node.js, Go, Static HTML, and Python HTTP servers read `GOAMPP_PORT`, while PHP receives its assigned port through the PHP server CLI arguments. Servers bind to `127.0.0.1` by default. All five starter templates serve from `public/`, keeping project-root files such as `README.md` and `.goampp-run.log` outside the document root. All five starter servers reject symlinks that resolve outside `public/`; the Static HTML, Node.js, Go, and Python HTTP servers also refuse to start if `public/` itself is a symlink, while the PHP router responds with HTTP 403. Output is appended to `.goampp-run.log` in the project directory. Closing GoAMPP stops any servers it started.
 
 ## Build from source
 
@@ -139,7 +140,7 @@ go build -trimpath -o dist/linux/goampp-linux .
 To create the four Linux distribution assets locally, install the packaging helper and run the release packaging script:
 
 ```bash
-sudo apt install file desktop-file-utils patchelf curl
+sudo apt install file desktop-file-utils patchelf curl imagemagick
 go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.41.3
 export PATH="$(go env GOPATH)/bin:$PATH"
 VERSION=dev bash packaging/linux/package.sh
