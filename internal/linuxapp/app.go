@@ -202,7 +202,11 @@ func Run() {
 		projectList.Objects = nil
 		names := listProjects(projectDir)
 		if len(names) == 0 {
-			projectList.Add(widget.NewLabel("No projects yet. Create one above to get started."))
+			projectList.Add(container.NewCenter(container.NewVBox(
+				container.NewCenter(widget.NewIcon(theme.FolderIcon())),
+				container.NewCenter(widget.NewLabel("No projects yet")),
+				container.NewCenter(widget.NewLabel("Create a starter above to get started.")),
+			)))
 		} else {
 			for _, name := range names {
 				projectName := name
@@ -325,14 +329,8 @@ func Run() {
 		container.NewBorder(nil, nil, nil, createButton, projectStatus),
 	), 10, 10, 12, 12)
 	projectsCard := linuxSurface(container.NewVBox(
-		container.NewBorder(nil, nil,
-			container.NewVBox(
-				widget.NewLabelWithStyle("Your projects", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-				widget.NewLabel("Run a starter, inspect its log, or open its folder."),
-			),
-			nil,
-			linuxVSpace(1),
-		),
+		widget.NewLabelWithStyle("Your projects", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		widget.NewLabel("Run a starter, inspect its log, or open its folder."),
 		linuxVSpace(8),
 		projectList,
 	), 10, 10, 12, 12)
@@ -439,9 +437,21 @@ func makeServiceCard(w fyne.Window, state serviceState, refresh func()) fyne.Can
 		status = "Installed"
 	}
 
+	statusAccent := theme.Color(linuxColorMuted)
+	switch status {
+	case "Running":
+		statusAccent = theme.Color(theme.ColorNameSuccess)
+	case "Installed":
+		statusAccent = theme.Color(theme.ColorNamePrimary)
+	case "Stopped":
+		statusAccent = theme.Color(theme.ColorNameWarning)
+	}
+	detailLabel := widget.NewLabel(detail)
+	detailLabel.Truncation = fyne.TextTruncateEllipsis
 	info := container.NewVBox(
-		widget.NewLabel("Status: "+status),
-		widget.NewLabel(detail),
+		widget.NewLabelWithStyle(state.Definition.Name, fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		linuxStatusBadge(status, statusAccent),
+		detailLabel,
 	)
 	var action *widget.Button
 	action = widget.NewButtonWithIcon("Start", theme.MediaPlayIcon(), func() {
