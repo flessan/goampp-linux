@@ -18,7 +18,7 @@ contents:
     dst: /usr/share/applications/goampp.desktop
     file_info:
       mode: 0644
-  - src: assets/logo.png
+  - src: dist/linux/goampp-icon-512.png
     dst: /usr/share/icons/hicolor/512x512/apps/goampp.png
     file_info:
       mode: 0644
