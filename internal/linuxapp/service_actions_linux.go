@@ -116,6 +116,22 @@ func showLinuxServiceLogs(w fyne.Window, state serviceState) {
 	refresh()
 }
 
+func showLinuxServiceLogGuidance(w fyne.Window, state serviceState) {
+	journalCommand := "sudo journalctl -u " + state.Unit + " -n 200 --no-pager"
+	commandLabel := widget.NewLabel(journalCommand)
+	commandLabel.Wrapping = fyne.TextWrapBreak
+	commandLabel.TextStyle = fyne.TextStyle{Monospace: true}
+	copy := widget.NewButtonWithIcon("Copy journal command", theme.ContentCopyIcon(), func() {
+		w.Clipboard().SetContent(journalCommand)
+		linuxSetStatus("Journal command copied for " + state.Unit)
+	})
+	note := widget.NewLabel("This system uses " + fallbackLinuxValue(state.Manager, "an unrecognized service manager") + ". GoAMPP cannot reliably infer its log backend. The command above is useful only if journald collects this service's output; otherwise inspect the distribution's service log files.")
+	note.Wrapping = fyne.TextWrapWord
+	d := dialog.NewCustom("Service logs · "+state.Unit, "Close", container.NewVBox(note, linuxVSpace(8), commandLabel, copy), w)
+	d.Resize(fyne.NewSize(620, 220))
+	d.Show()
+}
+
 func showLinuxServiceActions(w fyne.Window, state serviceState, refresh func()) {
 	title := widget.NewLabelWithStyle(state.Definition.Name, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
 	status := "Not installed"
@@ -158,10 +174,11 @@ func showLinuxServiceActions(w fyne.Window, state serviceState, refresh func()) 
 			runServiceAction(w, restart, state.Manager, state.Unit, "restart", refresh)
 		}
 		logs := widget.NewButtonWithIcon("Recent logs", theme.DocumentIcon(), func() {
-			if state.Manager != "systemd" {
-				dialog.ShowInformation("Service logs", "Automatic journal viewing is available for systemd services. Copy the command and inspect the distribution logs for other service managers.", w)
+			if state.Manager == "systemd" {
+				showLinuxServiceLogs(w, state)
+				return
 			}
-			showLinuxServiceLogs(w, state)
+			showLinuxServiceLogGuidance(w, state)
 		})
 		copyRestart := widget.NewButtonWithIcon("Copy restart command", theme.ContentCopyIcon(), func() {
 			command, err := linuxServiceActionCommand(state.Manager, state.Unit, "restart")
@@ -180,23 +197,41 @@ func showLinuxServiceActions(w fyne.Window, state serviceState, refresh func()) 
 	}
 
 	configPaths := linuxServiceConfigPaths(state.Definition.Name)
-	configSelect := widget.NewSelect(configPaths, nil)
-	if len(configPaths) > 0 {
-		configSelect.SetSelected(configPaths[0])
+	configOptions := make([]string, 0, len(configPaths))
+	configPathByOption := make(map[string]string, len(configPaths))
+	for _, fullPath := range configPaths {
+		option := filepath.Base(fullPath) + " · " + filepath.Dir(fullPath)
+		configOptions = append(configOptions, option)
+		configPathByOption[option] = fullPath
+	}
+	configSelect := widget.NewSelect(configOptions, nil)
+	configPathLabel := widget.NewLabel("")
+	configPathLabel.Wrapping = fyne.TextWrapBreak
+	configPathLabel.Importance = widget.LowImportance
+	selectedConfigPath := ""
+	configSelect.OnChanged = func(option string) {
+		selectedConfigPath = configPathByOption[option]
+		configPathLabel.SetText(selectedConfigPath)
+	}
+	if len(configOptions) > 0 {
+		configSelect.SetSelected(configOptions[0])
 	}
 	openConfig := widget.NewButtonWithIcon("Open config", theme.FolderOpenIcon(), func() {
-		if configSelect.Selected == "" {
+		if selectedConfigPath == "" {
 			dialog.ShowInformation("Configuration", "No known configuration file was found for this component. You can open a file manually from Config Editor.", w)
 			return
 		}
-		if err := openExternal(configSelect.Selected); err != nil {
+		if err := openExternal(selectedConfigPath); err != nil {
 			dialog.ShowError(err, w)
 		}
 	})
-	if len(configPaths) == 0 {
+	if len(configOptions) == 0 {
 		configSelect.Disable()
 	}
-	configRow := container.NewBorder(nil, nil, widget.NewLabel("Config file"), openConfig, configSelect)
+	configRow := container.NewVBox(
+		container.NewBorder(nil, nil, widget.NewLabel("Config file"), openConfig, configSelect),
+		linuxPad(configPathLabel, 3, 0, 0, 0),
+	)
 	commands := container.NewGridWithColumns(2, buttons...)
 	content := container.NewVBox(
 		title,
