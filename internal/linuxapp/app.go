@@ -8,6 +8,7 @@ package linuxapp
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -503,13 +504,43 @@ func makeServiceCard(w fyne.Window, state serviceState, refresh func()) fyne.Can
 }
 
 
+const maxProjectLogPreviewBytes int64 = 1024 * 1024
+
+func readProjectLogTail(path string, limit int64) (string, bool, error) {
+	if limit <= 0 {
+		return "", false, fmt.Errorf("log preview limit must be positive")
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return "", false, err
+	}
+	defer file.Close()
+	info, err := file.Stat()
+	if err != nil {
+		return "", false, err
+	}
+	start := int64(0)
+	truncated := info.Size() > limit
+	if truncated {
+		start = info.Size() - limit
+	}
+	if _, err := file.Seek(start, io.SeekStart); err != nil {
+		return "", false, err
+	}
+	data, err := io.ReadAll(io.LimitReader(file, limit))
+	if err != nil {
+		return "", false, err
+	}
+	return string(data), truncated, nil
+}
+
 func showProjectLog(w fyne.Window, projectName, logPath string) {
 	logText := widget.NewLabel("")
 	logText.Wrapping = fyne.TextWrapBreak
 	logText.TextStyle = fyne.TextStyle{Monospace: true}
 
 	refreshLog := func() {
-		data, err := os.ReadFile(logPath)
+		data, truncated, err := readProjectLogTail(logPath, maxProjectLogPreviewBytes)
 		if err != nil {
 			if os.IsNotExist(err) {
 				logText.SetText("No project log exists yet. Run this project first, then select Refresh.")
@@ -518,11 +549,14 @@ func showProjectLog(w fyne.Window, projectName, logPath string) {
 			logText.SetText("Could not read project log: " + err.Error())
 			return
 		}
-		if len(data) == 0 {
+		if data == "" {
 			logText.SetText("The project log is empty.")
 			return
 		}
-		logText.SetText(strings.TrimSpace(string(data)))
+		if truncated {
+			data = "[Showing the last 1 MiB of this log file. Open externally to inspect the full log.]\n\n" + data
+		}
+		logText.SetText(strings.TrimSpace(data))
 	}
 	refreshLog()
 
