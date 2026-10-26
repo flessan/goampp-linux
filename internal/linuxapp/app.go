@@ -187,12 +187,10 @@ func Run() {
 	rootLabel.Wrapping = fyne.TextWrapBreak
 	projectNameEntry := widget.NewEntry()
 	projectNameEntry.SetPlaceHolder("my-first-project")
-	templateSelect := widget.NewSelect(projectTemplateNames(), nil)
+	templateSelect := widget.NewSelect(projectCreationOptions(), nil)
 	templateDescription := widget.NewLabel("")
 	updateTemplateDescription := func(name string) {
-		if template, ok := projectTemplateByName(name); ok {
-			templateDescription.SetText(template.Description)
-		}
+		templateDescription.SetText(projectCreationDescription(name))
 	}
 	templateSelect.OnChanged = updateTemplateDescription
 	templateSelect.SetSelected("Static HTML")
@@ -284,18 +282,53 @@ func Run() {
 		}
 		projectList.Refresh()
 	}
-	createButton := widget.NewButtonWithIcon("Create project", theme.ContentAddIcon(), func() {
-		created, err := createProject(projectDir, projectNameEntry.Text, templateSelect.Selected)
-		if err != nil {
-			dialog.ShowError(err, w)
+	var createButton *widget.Button
+	createButton = widget.NewButtonWithIcon("Create project", theme.ContentAddIcon(), func() {
+		name := strings.TrimSpace(projectNameEntry.Text)
+		templateName := templateSelect.Selected
+		if !projectNamePattern.MatchString(name) {
+			dialog.ShowInformation("Projects", "Use 1–48 letters, numbers, underscores, or hyphens. The first character must be a letter or number.", w)
 			return
 		}
-		projectStatus.SetText("Created " + created + "  •  See README.md for run instructions.")
-		linuxAddLog("Created project " + filepath.Base(created) + " using " + templateSelect.Selected)
-		linuxSetStatus("Project created: " + filepath.Base(created))
-		projectNameEntry.SetText("")
-		refreshProjects()
-		dialog.ShowInformation("Project created", "Your starter files are ready. Open the project folder or read README.md for the next steps.", w)
+		if templateName == "" {
+			dialog.ShowInformation("Projects", "Choose a project template first.", w)
+			return
+		}
+		createButton.Disable()
+		projectNameEntry.Disable()
+		templateSelect.Disable()
+		projectStatus.SetText("Creating " + templateName + " in the background… Output is added to the activity log.")
+		linuxSetStatus("Creating project: " + name)
+		linuxAddLog("Creating project " + name + " using " + templateName)
+		go func() {
+			created, err := createProjectWithLog(projectDir, name, templateName, func(line string) {
+				linuxAddLog("[" + name + "] " + line)
+			})
+			fyne.Do(func() {
+				createButton.Enable()
+				projectNameEntry.Enable()
+				templateSelect.Enable()
+				if err != nil {
+					if created != "" {
+						projectStatus.SetText("Project creation failed. Partial files were kept at " + created + ". Inspect Logs before retrying.")
+						linuxAddLog("Project creation failed for " + name + ": " + err.Error())
+						refreshProjects()
+					} else {
+						projectStatus.SetText("Could not create " + name + ": " + err.Error())
+						linuxAddLog("Project creation failed for " + name + ": " + err.Error())
+					}
+					linuxSetStatus("Project creation failed: " + name)
+					dialog.ShowError(err, w)
+					return
+				}
+				projectStatus.SetText("Created " + created + ". See README.md or Logs for next steps.")
+				linuxAddLog("Created project " + filepath.Base(created) + " using " + templateName)
+				linuxSetStatus("Project created: " + filepath.Base(created))
+				projectNameEntry.SetText("")
+				refreshProjects()
+				dialog.ShowInformation("Project created", "Your project files are ready. GoAMPP keeps framework creation output in the project's Logs file.", w)
+			})
+		}()
 	})
 	projectActions := container.NewHBox(
 		widget.NewButtonWithIcon("Open folder", theme.FolderOpenIcon(), func() {
