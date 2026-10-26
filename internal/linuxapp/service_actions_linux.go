@@ -184,7 +184,6 @@ func showLinuxServiceActions(w fyne.Window, state serviceState, refresh func()) 
 	if len(configPaths) > 0 {
 		configSelect.SetSelected(configPaths[0])
 	}
-	configSelect.Wrapping = fyne.TextWrapBreak
 	openConfig := widget.NewButtonWithIcon("Open config", theme.FolderOpenIcon(), func() {
 		if configSelect.Selected == "" {
 			dialog.ShowInformation("Configuration", "No known configuration file was found for this component. You can open a file manually from Config Editor.", w)
