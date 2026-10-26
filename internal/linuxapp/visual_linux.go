@@ -26,10 +26,11 @@ var (
 	linuxAssetMu    sync.Mutex
 	linuxAssetCache = map[string]fyne.Resource{}
 
-	linuxToolProbeMu      sync.Mutex
-	linuxToolVersionCache = map[string]string{}
-	linuxToolProbePending = map[string]bool{}
-	linuxToolProbeWaiters = map[string][]*widget.Label{}
+	linuxToolProbeMu        sync.Mutex
+	linuxToolVersionCache   = map[string]string{}
+	linuxToolProbePending   = map[string]bool{}
+	linuxToolProbeWaiters   = map[string][]*widget.Label{}
+	linuxToolProbeSemaphore = make(chan struct{}, 4)
 )
 
 func linuxCachedToolVersion(name string) (string, bool) {
@@ -55,6 +56,8 @@ func linuxRequestToolVersion(name, binary string, args []string, label *widget.L
 	linuxToolProbeMu.Unlock()
 
 	go func() {
+		linuxToolProbeSemaphore <- struct{}{}
+		defer func() { <-linuxToolProbeSemaphore }()
 		output, err := runCommandWithTimeout(2*time.Second, binary, args...)
 		version := ""
 		if err == nil {
