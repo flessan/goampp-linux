@@ -22,6 +22,7 @@ import (
 
 	"goampp/internal/core"
 	"goampp/internal/packages"
+	"goampp/internal/uikit"
 )
 
 const appID = "id.imtaqin.goampp"
@@ -222,16 +223,9 @@ func rebuildContent() {
 		gui.pageHost.Add(p.body)
 	}
 
-	header := container.NewBorder(nil, nil, container.NewCenter(gui.headerTitle), gui.headerActions)
-	main := container.NewBorder(
-		container.New(layout.NewCustomPaddedLayout(12, 8, 18, 18), header),
-		buildBottomBar(),
-		nil, nil,
-		container.New(layout.NewCustomPaddedLayout(0, 10, 18, 18), gui.pageHost),
-	)
-
-	bg := canvas.NewRectangle(themeColor(theme.ColorNameBackground))
-	core.App.Win.SetContent(container.NewBorder(nil, nil, buildSidebar(), nil, container.NewStack(bg, main)))
+	core.App.Win.SetContent(uikit.PageFrame(
+		buildSidebar(), gui.headerTitle, gui.headerActions, buildBottomBar(), gui.pageHost,
+	))
 
 	gui.current = ""
 	showPage(current)
@@ -290,16 +284,16 @@ func buildSidebar() fyne.CanvasObject {
 	stop := lowButton("Stop all", theme.NewErrorThemedResource(theme.MediaStopIcon()), func() { go core.StopAllServices() })
 	stop.Alignment = widget.ButtonAlignLeading
 
-	body := container.NewBorder(
-		container.NewVBox(container.New(layout.NewCustomPaddedLayout(0, 0, 6, 0), brand), vSpace(14), nav),
-		container.NewVBox(stat, start, stop, vSpace(4),
-			container.New(layout.NewCustomPaddedLayout(0, 0, 8, 0), mutedText(core.Version, 10.5))),
-		nil, nil,
+	top := container.NewVBox(
+		container.New(layout.NewCustomPaddedLayout(0, 0, 6, 0), brand),
+		vSpace(14),
+		nav,
 	)
-	bg := canvas.NewRectangle(themeColor(colorSidebar))
-	edge := canvas.NewRectangle(themeColor(theme.ColorNameSeparator))
-	return container.NewBorder(nil, nil, nil, container.NewGridWrap(fyne.NewSize(1, 1), edge),
-		container.NewStack(bg, minSized(container.New(layout.NewCustomPaddedLayout(14, 10, 10, 10), body), 184, 0)))
+	bottom := container.NewVBox(
+		stat, start, stop, vSpace(4),
+		container.New(layout.NewCustomPaddedLayout(0, 0, 8, 0), mutedText(core.Version, 10.5)),
+	)
+	return uikit.Sidebar(top, bottom)
 }
 
 func refreshStackSummary() {
