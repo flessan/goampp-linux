@@ -154,16 +154,10 @@ func serviceAvatar(name string, size float32) fyne.CanvasObject {
 
 // ---- sidebar navigation item ----
 
-type navItem struct {
-	*uikit.NavItem
-}
+type navItem = uikit.NavItem
 
 func newNavItem(label string, icon fyne.Resource, onTap func()) *navItem {
-	return &navItem{NavItem: uikit.NewNavItem(label, icon, onTap)}
-}
-
-func (n *navItem) setSelected(selected bool) {
-	n.NavItem.SetSelected(selected)
+	return uikit.NewNavItem(label, icon, onTap)
 }
 
 // ---- segmented control ----
