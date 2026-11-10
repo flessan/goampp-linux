@@ -5,6 +5,7 @@ package gui
 import (
 	"image/color"
 
+	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/theme"
 
 	"goampp/internal/uikit"
@@ -41,7 +42,11 @@ func hexA(value uint32, alpha uint8) color.NRGBA {
 }
 
 var (
-	colSuccess color.Color = theme.Color(theme.ColorNameSuccess)
-	colWarning color.Color = theme.Color(theme.ColorNameWarning)
-	colError   color.Color = theme.Color(theme.ColorNameError)
+	colSuccess color.Color = uikit.Hex(0x22c55e)
+	colWarning color.Color = uikit.Hex(0xf59e0b)
+	colError   color.Color = uikit.Hex(0xef4444)
 )
+
+func themeColor(name fyne.ThemeColorName) color.Color {
+	return theme.Color(name)
+}
