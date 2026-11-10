@@ -132,12 +132,13 @@ func Run() {
 	var cachedServices []serviceState
 	var refreshServices func()
 	var refreshButton *widget.Button
+	var renderServiceList func([]serviceState)
 
 	serviceTabs := newLinuxSegmented([]string{"All", "Web", "Databases", "Languages", "Tools"}, func(index int) {
 		serviceTab = index
 		renderServiceList(cachedServices)
 	})
-	renderServiceList := func(states []serviceState) {
+	renderServiceList = func(states []serviceState) {
 		serviceList.Objects = nil
 		query := strings.ToLower(strings.TrimSpace(serviceSearch.Text))
 		groups := []struct {
