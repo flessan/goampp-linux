@@ -244,11 +244,11 @@ func showPage(key string) {
 	for _, p := range gui.pages {
 		if p.key != key {
 			p.body.Hide()
-			p.nav.setSelected(false)
+			p.nav.SetSelected(false)
 			continue
 		}
 		p.body.Show()
-		p.nav.setSelected(true)
+		p.nav.SetSelected(true)
 		gui.headerTitle.Text = p.title
 		gui.headerTitle.Refresh()
 		gui.headerActions.Objects = nil
