@@ -432,9 +432,7 @@ func applyServiceFilter() {
 }
 
 func rowDivider() fyne.CanvasObject {
-	line := canvas.NewRectangle(themeColor(theme.ColorNameSeparator))
-	line.SetMinSize(fyne.NewSize(1, 1))
-	return container.New(layout.NewCustomPaddedLayout(0, 0, 10, 10), line)
+	return uikit.Pad(uikit.Divider(), 0, 0, 10, 10)
 }
 
 // refreshServiceList re-renders every row from live state. It must run on
