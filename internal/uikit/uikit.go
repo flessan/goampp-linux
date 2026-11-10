@@ -64,7 +64,6 @@ func MutedText(value string, size float32) *canvas.Text {
 	return text
 }
 
-// SectionLabel is the standard uppercase section heading used across pages.
 // Divider returns the shared one-pixel separator used between compact rows.
 func Divider() fyne.CanvasObject {
 	line := canvas.NewRectangle(theme.Color(theme.ColorNameSeparator))
@@ -72,6 +71,7 @@ func Divider() fyne.CanvasObject {
 	return line
 }
 
+// SectionLabel is the standard uppercase section heading used across pages.
 func SectionLabel(value string) fyne.CanvasObject {
 	return Pad(MutedText(value, 10.5), 8, 2, 2, 0)
 }
@@ -107,7 +107,7 @@ func PageFrame(sidebar, title, actions, bottom, pageHost fyne.CanvasObject) fyne
 }
 
 
- // Segmented is the shared compact tab selector used for service filters and
+// Segmented is the shared compact tab selector used for service filters and
  // appearance controls on both desktop platforms.
 type Segmented struct {
 	buttons  []*widget.Button
