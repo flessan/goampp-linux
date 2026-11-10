@@ -144,7 +144,7 @@ func buildServicesPage() (fyne.CanvasObject, fyne.CanvasObject) {
 		rows := container.NewVBox()
 		sec := &svcSection{group: o.group, rows: rows}
 		sec.obj = container.NewVBox(
-			container.New(layout.NewCustomPaddedLayout(8, 2, 2, 0), mutedText(o.title, 10.5)),
+			uikit.SectionLabel(o.title),
 			newListCard(rows),
 		)
 		svcUI.sections = append(svcUI.sections, sec)
