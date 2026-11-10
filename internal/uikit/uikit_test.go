@@ -3,6 +3,8 @@ package uikit
 import (
 	"testing"
 
+	"fyne.io/fyne/v2"
+
 	"fyne.io/fyne/v2/theme"
 )
 
