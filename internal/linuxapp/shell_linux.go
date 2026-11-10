@@ -387,7 +387,7 @@ func linuxRecolorColor(current color.Color, role string) color.Color {
 func linuxRecolorObject(obj fyne.CanvasObject) {
 	switch item := obj.(type) {
 	case *linuxNavItem:
-		item.applyState()
+		item.RefreshState()
 	case *canvas.Rectangle:
 		item.FillColor = linuxRecolorColor(item.FillColor, "surface")
 		item.StrokeColor = linuxRecolorColor(item.StrokeColor, "surface")
