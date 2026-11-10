@@ -24,6 +24,8 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+
+	"goampp/internal/uikit"
 )
 
 type serviceDefinition struct {
@@ -97,8 +99,8 @@ func Run() {
 	if logo := linuxLogoResource(); logo != nil {
 		a.SetIcon(logo)
 	}
-	w := a.NewWindow("GoAMPP for Linux")
-	w.Resize(fyne.NewSize(1120, 760))
+	w := a.NewWindow("GoAMPP")
+	w.Resize(fyne.NewSize(1080, 680))
 	w.CenterOnScreen()
 
 	desktopApp, trayAvailable := a.(desktop.App)
@@ -126,76 +128,90 @@ func Run() {
 	serviceSearch := widget.NewEntry()
 	serviceSearch.SetPlaceHolder("Search services and runtimes")
 	serviceSearch.ActionItem = widget.NewIcon(theme.NewDisabledResource(theme.SearchIcon()))
+	serviceTab := 0
 	var cachedServices []serviceState
 	var refreshServices func()
 	var refreshButton *widget.Button
 
+	serviceTabs := newLinuxSegmented([]string{"All", "Web", "Databases", "Languages", "Tools"}, func(index int) {
+		serviceTab = index
+		renderServiceList(cachedServices)
+	})
 	renderServiceList := func(states []serviceState) {
 		serviceList.Objects = nil
 		query := strings.ToLower(strings.TrimSpace(serviceSearch.Text))
 		groups := []struct {
+			tab   int
 			title string
 			match func(serviceState) bool
 		}{
-			{"WEB SERVERS", func(state serviceState) bool {
-				return state.Definition.Name == "Apache HTTP Server" || state.Definition.Name == "Nginx" || state.Definition.Name == "Caddy"
+			{1, "WEB SERVERS", func(state serviceState) bool {
+				name := state.Definition.Name
+				return name == "Apache HTTP Server" || name == "Nginx" || name == "Caddy"
 			}},
-			{"DATABASES & CACHES", func(state serviceState) bool {
-				return state.Definition.Name == "MariaDB / MySQL" || state.Definition.Name == "PostgreSQL" ||
-					state.Definition.Name == "Redis" || state.Definition.Name == "Memcached"
+			{2, "DATABASES & CACHES", func(state serviceState) bool {
+				name := state.Definition.Name
+				return name == "MariaDB / MySQL" || name == "PostgreSQL" || name == "Redis" || name == "Memcached"
 			}},
-			{"QUEUES & CONTAINERS", func(state serviceState) bool {
+			{3, "LANGUAGES & RUNTIMES", func(state serviceState) bool {
+				return state.Definition.Name == "PHP-FPM"
+			}},
+			{4, "TOOLS", func(state serviceState) bool {
 				return state.Definition.Name == "RabbitMQ" || state.Definition.Name == "Docker Engine"
 			}},
-			{"LANGUAGES & RUNTIMES", func(state serviceState) bool { return state.Definition.Name == "PHP-FPM" }},
 		}
+
 		for _, group := range groups {
-			var matched []serviceState
+			if serviceTab != 0 && serviceTab != group.tab {
+				continue
+			}
+			rows := container.NewVBox()
+			rowCount := 0
 			for _, state := range states {
-				if group.match(state) && (query == "" ||
-					strings.Contains(strings.ToLower(state.Definition.Name+" "+state.Unit+" "+state.Binary), query)) {
-					matched = append(matched, state)
+				if !group.match(state) {
+					continue
+				}
+				if query != "" && !strings.Contains(strings.ToLower(state.Definition.Name+" "+state.Unit+" "+state.Binary), query) {
+					continue
+				}
+				if rowCount > 0 {
+					rows.Add(uikit.Pad(uikit.Divider(), 0, 0, 10, 10))
+				}
+				rows.Add(makeServiceCard(w, state, refreshServices))
+				rowCount++
+			}
+
+			if group.tab == 3 || group.tab == 4 {
+				for _, tool := range toolDefinitions {
+					isRuntime := isLinuxLanguageTool(tool.Name)
+					if (group.tab == 3) != isRuntime {
+						continue
+					}
+					if query != "" && !strings.Contains(strings.ToLower(tool.Name+" "+strings.Join(tool.Binaries, " ")), query) {
+						continue
+					}
+					if rowCount > 0 {
+						rows.Add(uikit.Pad(uikit.Divider(), 0, 0, 10, 10))
+					}
+					rows.Add(makeToolCard(w, tool))
+					rowCount++
 				}
 			}
-			if len(matched) == 0 {
+
+			if rowCount == 0 {
 				continue
 			}
 			serviceList.Add(linuxSectionLabel(group.title))
-			serviceList.Add(linuxVSpace(3))
-			rows := container.NewVBox()
-			for i, state := range matched {
-				if i > 0 {
-					rows.Add(linuxVSpace(5))
-				}
-				rows.Add(makeServiceCard(w, state, refreshServices))
-			}
-			serviceList.Add(rows)
+			serviceList.Add(uikit.Surface(rows, 2, 2, 0, 0))
 			serviceList.Add(linuxVSpace(8))
 		}
-		var matchingTools []toolDefinition
-		for _, tool := range toolDefinitions {
-			if query == "" || strings.Contains(strings.ToLower(tool.Name+" "+strings.Join(tool.Binaries, " ")), query) {
-				matchingTools = append(matchingTools, tool)
-			}
-		}
-		if len(matchingTools) > 0 {
-			serviceList.Add(linuxSectionLabel("LANGUAGES & DEVELOPER TOOLS"))
-			serviceList.Add(linuxVSpace(3))
-			rows := container.NewVBox()
-			for i, tool := range matchingTools {
-				if i > 0 {
-					rows.Add(linuxVSpace(5))
-				}
-				rows.Add(makeToolCard(w, tool))
-			}
-			serviceList.Add(rows)
-		}
+
 		if len(serviceList.Objects) == 0 {
 			serviceList.Add(container.NewCenter(widget.NewLabel("No matching services or runtimes.")))
 		}
 		serviceList.Refresh()
 	}
-
+	serviceTabs.shared.SetSelected(0, false)
 	serviceSearch.OnChanged = func(string) { renderServiceList(cachedServices) }
 	refreshServices = func() {
 		linuxResetToolVersionCache()
@@ -221,13 +237,12 @@ func Run() {
 		}()
 	}
 	refreshButton = widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), refreshServices)
-	serviceToolbar := container.NewBorder(nil, nil, serviceStatus, linuxMinSize(serviceSearch, 210, 0), linuxGap(1))
+	toolbar := container.NewBorder(nil, nil, serviceTabs.obj, linuxMinSize(serviceSearch, 190, 0), linuxGap(1))
 	servicePage := container.NewBorder(
-		linuxPad(linuxSurface(serviceToolbar, 8, 8, 12, 12), 0, 8, 0, 0),
+		container.NewVBox(toolbar, linuxPad(serviceStatus, 5, 5, 2, 2)),
 		nil, nil, nil,
 		container.NewVScroll(linuxPad(serviceList, 4, 10, 2, 2)),
 	)
-
 	rootLabel := widget.NewLabel(projectDir)
 	rootLabel.Wrapping = fyne.TextWrapBreak
 	projectNameEntry := widget.NewEntry()
@@ -592,10 +607,10 @@ func makeServiceCard(w fyne.Window, state serviceState, refresh func()) fyne.Can
 	if state.Unit != "" {
 		detail = "service unit: " + state.Unit
 		if state.Binary != "" {
-			detail += "  •  " + state.Binary
+			detail += " · " + state.Binary
 		}
 	} else if state.Binary != "" {
-		detail = state.Binary + "  •  no matching service unit found"
+		detail = state.Binary + " · no matching service unit found"
 	}
 
 	status := "Not installed"
@@ -617,44 +632,48 @@ func makeServiceCard(w fyne.Window, state serviceState, refresh func()) fyne.Can
 	case "Stopped":
 		statusAccent = theme.Color(theme.ColorNameWarning)
 	}
-	detailLabel := widget.NewLabel(detail)
-	detailLabel.Wrapping = fyne.TextWrapBreak
 	titleLabel := widget.NewLabelWithStyle(state.Definition.Name, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
-	heading := container.NewHBox(
-		linuxImage(linuxServiceResource(state.Definition.Name), 38, state.Definition.Name),
-		linuxHGap(10),
-		container.NewVBox(titleLabel, linuxStatusBadge(status, statusAccent)),
+	detailLabel := widget.NewLabel(detail)
+	detailLabel.SizeName = theme.SizeNameCaptionText
+	detailLabel.Truncation = fyne.TextTruncateEllipsis
+	identity := container.NewHBox(
+		linuxImage(linuxServiceResource(state.Definition.Name), 20, state.Definition.Name),
+		linuxHGap(8),
+		container.NewVBox(titleLabel, detailLabel),
 	)
+
 	var action *widget.Button
 	action = widget.NewButtonWithIcon("Start", theme.MediaPlayIcon(), func() {
 		runServiceAction(w, action, state.Manager, state.Unit, "start", refresh)
 	})
-	action.Importance = widget.MediumImportance
-	if state.Running {
+	action.Importance = widget.LowImportance
+	switch {
+	case state.Running:
 		action.SetText("Stop")
 		action.SetIcon(theme.MediaStopIcon())
-		action.OnTapped = func() {
-			runServiceAction(w, action, state.Manager, state.Unit, "stop", refresh)
-		}
+		action.OnTapped = func() { runServiceAction(w, action, state.Manager, state.Unit, "stop", refresh) }
+	case state.Unit != "":
+		action.SetText("Start")
+	case state.Binary == "":
+		action.SetText("Install guide")
+		action.SetIcon(theme.DownloadIcon())
+		action.OnTapped = func() { showLinuxPackageCommand(w, state.Definition.Name, false) }
+	default:
+		action.SetText("No service unit")
+		action.SetIcon(theme.InfoIcon())
+		action.Disable()
 	}
-	if state.Unit == "" {
-		if state.Binary == "" {
-			action.SetText("Install guide")
-			action.SetIcon(theme.DownloadIcon())
-			action.OnTapped = func() { showLinuxPackageCommand(w, state.Definition.Name, false) }
-			action.Enable()
-		} else {
-			action.SetText("No service unit")
-			action.SetIcon(theme.InfoIcon())
-			action.Disable()
-		}
-	}
-	moreButton := widget.NewButtonWithIcon("More", theme.MoreHorizontalIcon(), func() {
+	moreButton := widget.NewButtonWithIcon("", theme.MoreHorizontalIcon(), func() {
 		showLinuxServiceActions(w, state, refresh)
 	})
-	header := container.NewBorder(nil, nil, heading, container.NewHBox(action, moreButton), linuxGap(1))
-	details := linuxPad(detailLabel, 0, 0, 48, 0)
-	return linuxSurface(container.NewVBox(header, details), 10, 10, 12, 12)
+	moreButton.Importance = widget.LowImportance
+	right := container.NewHBox(
+		linuxMinSize(linuxStatusBadge(status, statusAccent), 120, 0),
+		linuxMinSize(action, 86, 0),
+		moreButton,
+	)
+	row := container.NewBorder(nil, nil, identity, right, linuxGap(1))
+	return uikit.Pad(row, 3, 3, 6, 6)
 }
 
 
@@ -781,6 +800,15 @@ func runServiceAction(w fyne.Window, action *widget.Button, manager, unit, verb 
 	}()
 }
 
+func isLinuxLanguageTool(name string) bool {
+	switch name {
+	case "PHP", "Node.js", "Python", "Go", "Java", "Rust", "Ruby", "Elixir", "Erlang", "Perl":
+		return true
+	default:
+		return false
+	}
+}
+
 func makeToolCard(w fyne.Window, tool toolDefinition) fyne.CanvasObject {
 	binary := findExecutable(tool.Binaries)
 	status := "Not installed"
@@ -788,7 +816,8 @@ func makeToolCard(w fyne.Window, tool toolDefinition) fyne.CanvasObject {
 		status = "Installed at " + binary
 	}
 	statusLabel := widget.NewLabel(status)
-	statusLabel.Wrapping = fyne.TextWrapBreak
+	statusLabel.SizeName = theme.SizeNameCaptionText
+	statusLabel.Truncation = fyne.TextTruncateEllipsis
 	if binary != "" && len(tool.Arguments) > 0 {
 		if version, ok := linuxCachedToolVersion(tool.Name); ok {
 			statusLabel.SetText(binary + " · " + version)
@@ -798,21 +827,19 @@ func makeToolCard(w fyne.Window, tool toolDefinition) fyne.CanvasObject {
 	}
 	title := widget.NewLabelWithStyle(tool.Name, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
 	identity := container.NewHBox(
-		linuxImage(linuxToolResource(tool.Name), 36, tool.Name),
-		linuxHGap(10),
-		container.NewCenter(title),
+		linuxImage(linuxToolResource(tool.Name), 20, tool.Name),
+		linuxHGap(8),
+		container.NewVBox(title, statusLabel),
 	)
+	var action fyne.CanvasObject = linuxGap(1)
 	if binary == "" {
 		installButton := widget.NewButtonWithIcon("Install guide", theme.DownloadIcon(), func() {
 			showLinuxPackageCommand(w, tool.Name, true)
 		})
 		installButton.Importance = widget.LowImportance
-		identity = container.NewBorder(nil, nil, identity, installButton, linuxGap(1))
+		action = linuxMinSize(installButton, 86, 0)
 	}
-	return linuxSurface(container.NewVBox(
-		identity,
-		linuxPad(statusLabel, 4, 0, 46, 0),
-	), 9, 9, 10, 10)
+	return uikit.Pad(container.NewBorder(nil, nil, identity, action, linuxGap(1)), 3, 3, 6, 6)
 }
 
 func runCommandWithTimeout(timeout time.Duration, command string, args ...string) ([]byte, error) {
