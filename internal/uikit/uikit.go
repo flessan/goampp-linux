@@ -5,6 +5,7 @@ package uikit
 
 import (
 	"image/color"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -241,3 +242,175 @@ func (n *NavItem) MouseOut() {
 }
 
 func (n *NavItem) Cursor() desktop.Cursor { return desktop.PointerCursor }
+
+func Hex(value uint32) color.NRGBA {
+	return color.NRGBA{R: uint8(value >> 16), G: uint8(value >> 8), B: uint8(value), A: 0xff}
+}
+
+func HexA(value uint32, alpha uint8) color.NRGBA {
+	result := Hex(value)
+	result.A = alpha
+	return result
+}
+
+// Palette is the single source of truth for GoAMPP's shared desktop colors.
+type Palette struct {
+	Background, Sidebar, Card, Border, Input, Button, Hover, Pressed color.Color
+	Foreground, Muted, Primary, NavActive, Separator color.Color
+	Menu, Overlay, Header, Scroll, Shadow, Selection, LogBackground color.Color
+	Placeholder, Disabled, DisabledButton color.Color
+}
+
+func PaletteForVariant(variant fyne.ThemeVariant) Palette {
+	if variant == theme.VariantLight {
+		return Palette{
+			Background: Hex(0xfafafa), Sidebar: Hex(0xf4f4f5), Card: Hex(0xffffff),
+			Border: Hex(0xe4e4e7), Input: Hex(0xffffff), Button: Hex(0xf4f4f5),
+			Hover: HexA(0x000000, 0x08), Pressed: HexA(0x000000, 0x12),
+			Foreground: Hex(0x18181b), Muted: Hex(0x71717a), Primary: Hex(0x2563eb),
+			NavActive: HexA(0x000000, 0x08), Separator: Hex(0xe9e9ec),
+			Menu: Hex(0xffffff), Overlay: Hex(0xffffff), Header: Hex(0xf4f4f5),
+			Scroll: HexA(0x000000, 0x26), Shadow: HexA(0x000000, 0x22),
+			Selection: HexA(0x2563eb, 0x30), LogBackground: Hex(0xfafafa),
+			Placeholder: Hex(0xa1a1aa), Disabled: Hex(0xa1a1aa), DisabledButton: Hex(0xf4f4f5),
+		}
+	}
+	return Palette{
+		Background: Hex(0x0c0c0e), Sidebar: Hex(0x0f0f12), Card: Hex(0x131316),
+		Border: Hex(0x222226), Input: Hex(0x18181c), Button: Hex(0x1c1c21),
+		Hover: HexA(0xffffff, 0x0c), Pressed: HexA(0xffffff, 0x18),
+		Foreground: Hex(0xe4e4e7), Muted: Hex(0x85858f), Primary: Hex(0x4f8cff),
+		NavActive: HexA(0xffffff, 0x0e), Separator: Hex(0x1f1f23),
+		Menu: Hex(0x17171b), Overlay: Hex(0x131316), Header: Hex(0x131316),
+		Scroll: HexA(0xffffff, 0x26), Shadow: HexA(0x000000, 0x66),
+		Selection: HexA(0x4f8cff, 0x40), LogBackground: Hex(0x0c0c0e),
+		Placeholder: Hex(0x5b5b64), Disabled: Hex(0x55555e), DisabledButton: Hex(0x16161a),
+	}
+}
+
+type Theme struct {
+	forced *fyne.ThemeVariant
+}
+
+func NewTheme(preference string) *Theme {
+	result := &Theme{}
+	if strings.EqualFold(strings.TrimSpace(preference), "dark") {
+		variant := theme.VariantDark
+		result.forced = &variant
+	}
+	return result
+}
+
+func (t *Theme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
+	if t.forced != nil {
+		variant = *t.forced
+	}
+	p := PaletteForVariant(variant)
+	switch name {
+	case theme.ColorNameBackground:
+		return p.Background
+	case theme.ColorNameButton:
+		return p.Button
+	case theme.ColorNameDisabledButton:
+		return p.DisabledButton
+	case theme.ColorNameDisabled:
+		return p.Disabled
+	case theme.ColorNameForeground:
+		return p.Foreground
+	case theme.ColorNameHover:
+		return p.Hover
+	case theme.ColorNamePressed:
+		return p.Pressed
+	case theme.ColorNameInputBackground:
+		return p.Input
+	case theme.ColorNameInputBorder:
+		return p.Border
+	case theme.ColorNamePrimary, theme.ColorNameFocus, theme.ColorNameHyperlink:
+		return p.Primary
+	case theme.ColorNameForegroundOnPrimary, theme.ColorNameForegroundOnError, theme.ColorNameForegroundOnSuccess:
+		return color.White
+	case theme.ColorNameForegroundOnWarning:
+		return Hex(0x1b1200)
+	case theme.ColorNameSelection:
+		return p.Selection
+	case theme.ColorNameSeparator:
+		return p.Separator
+	case theme.ColorNameMenuBackground:
+		return p.Menu
+	case theme.ColorNameOverlayBackground:
+		return p.Overlay
+	case theme.ColorNameHeaderBackground:
+		return p.Header
+	case theme.ColorNameScrollBar:
+		return p.Scroll
+	case theme.ColorNameShadow:
+		return p.Shadow
+	case theme.ColorNamePlaceHolder:
+		return p.Placeholder
+	case theme.ColorNameSuccess:
+		return Hex(0x22c55e)
+	case theme.ColorNameWarning:
+		return Hex(0xf59e0b)
+	case theme.ColorNameError:
+		return Hex(0xef4444)
+	case ColorNameCard:
+		return p.Card
+	case ColorNameCardBorder:
+		return p.Border
+	case ColorNameSidebar:
+		return p.Sidebar
+	case ColorNameMuted:
+		return p.Muted
+	case ColorNameNavActive:
+		return p.NavActive
+	case ColorNameLogBg:
+		return p.LogBackground
+	default:
+		return theme.DefaultTheme().Color(name, variant)
+	}
+}
+
+func (t *Theme) Icon(name fyne.ThemeIconName) fyne.Resource {
+	return theme.DefaultTheme().Icon(name)
+}
+
+func (t *Theme) Size(name fyne.ThemeSizeName) float32 {
+	switch name {
+	case theme.SizeNameText:
+		return 12.5
+	case theme.SizeNameCaptionText:
+		return 11
+	case theme.SizeNameHeadingText:
+		return 17
+	case theme.SizeNameSubHeadingText:
+		return 14
+	case theme.SizeNamePadding:
+		return 4
+	case theme.SizeNameInnerPadding:
+		return 6
+	case theme.SizeNameLineSpacing:
+		return 3
+	case theme.SizeNameInlineIcon:
+		return 16
+	case theme.SizeNameInputRadius, theme.SizeNameButtonRadius:
+		return 6
+	case theme.SizeNameSelectionRadius:
+		return 5
+	case theme.SizeNameCardRadius, theme.SizeNameDialogRadius:
+		return 8
+	case theme.SizeNamePopupRadius, theme.SizeNameMenuRadius:
+		return 8
+	case theme.SizeNameScrollBar:
+		return 8
+	case theme.SizeNameScrollBarSmall, theme.SizeNameScrollBarRadius:
+		return 3
+	case theme.SizeNameSeparatorThickness, theme.SizeNameInputBorder:
+		return 1
+	default:
+		return theme.DefaultTheme().Size(name)
+	}
+}
+
+func (t *Theme) Font(style fyne.TextStyle) fyne.Resource {
+	return theme.DefaultTheme().Font(style)
+}
