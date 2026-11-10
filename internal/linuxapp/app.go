@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -475,17 +476,14 @@ func Run() {
 			break
 		}
 	}
-	lightModeInfo := linuxSurface(container.NewVBox(
+	contributeURL, _ := url.Parse("https://github.com/flessan/goampp-linux")
+	lightModeInfo := uikit.Surface(container.NewVBox(
 		container.NewHBox(
 			widget.NewIcon(theme.InfoIcon()),
-			linuxBoldText("Light mode is not available yet", 12.5),
+			uikit.BoldText("Light mode is not available yet", 12.5),
 		),
 		widget.NewLabel("Flessan, the maintainer working on this project, has not finished the light theme yet. Contributions are open on GitHub if you'd like to help build it."),
-		widget.NewButtonWithIcon("Contribute on GitHub", theme.ComputerIcon(), func() {
-			if err := openExternal("https://github.com/flessan/goampp-linux"); err != nil {
-				dialog.ShowError(err, w)
-			}
-		}),
+		widget.NewHyperlink("Contribute on GitHub", contributeURL),
 	), 8, 8, 12, 12)
 	appearanceRow := container.NewVBox(
 		container.New(layout.NewCustomPaddedLayout(8, 8, 12, 8), container.NewBorder(
