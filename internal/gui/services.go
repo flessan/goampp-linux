@@ -18,6 +18,7 @@ import (
 	"goampp/internal/config"
 	"goampp/internal/core"
 	"goampp/internal/packages"
+	"goampp/internal/uikit"
 )
 
 // svcCard is one service row on the Services page.
@@ -158,11 +159,7 @@ func buildServicesPage() (fyne.CanvasObject, fyne.CanvasObject) {
 
 // newListCard is a bordered surface with no inner padding, for row lists.
 func newListCard(content fyne.CanvasObject) fyne.CanvasObject {
-	bg := canvas.NewRectangle(themeColor(colorCard))
-	bg.CornerRadius = theme.Size(theme.SizeNameCardRadius)
-	bg.StrokeColor = themeColor(colorCardBorder)
-	bg.StrokeWidth = 1
-	return container.NewStack(bg, container.New(layout.NewCustomPaddedLayout(2, 2, 0, 0), content))
+	return uikit.Surface(content, 2, 2, 0, 0)
 }
 
 func newServiceCard(ms *core.ManagedService) *svcCard {
