@@ -18,11 +18,12 @@ import (
 	"goampp/internal/core"
 	"goampp/internal/pathenv"
 	"goampp/internal/vhost"
+	"goampp/internal/uikit"
 )
 
 func buildSettingsPage() (fyne.CanvasObject, fyne.CanvasObject) {
 	// Appearance
-	themes := []string{themeSystem, themeLight, themeDark}
+	themes := []string{themeSystem, themeDark}
 	themeSeg := newSegmented(themes, func(i int) {
 		core.App.Fyne.Preferences().SetString(themePrefKey, themes[i])
 		core.App.Fyne.Settings().SetTheme(newGoamppTheme(themes[i]))
@@ -33,7 +34,18 @@ func buildSettingsPage() (fyne.CanvasObject, fyne.CanvasObject) {
 			themeSeg.setSelected(i, false)
 		}
 	}
-	appearance := settingsRow("Theme", "System follows the Windows light/dark setting.", themeSeg.obj)
+	lightModeInfo := uikit.Surface(container.NewVBox(
+		container.NewHBox(
+			widget.NewIcon(theme.InfoIcon()),
+			boldText("Light mode is not available yet", 12.5),
+		),
+		widget.NewLabel("Flessan, the maintainer working on this project, has not finished the light theme yet. Contributions are open on GitHub if you'd like to help build it."),
+		widget.NewHyperlink("Contribute on GitHub", mustURL("https://github.com/flessan/goampp-linux")),
+	), 8, 8, 12, 12)
+	appearance := container.NewVBox(
+		settingsRow("Theme", "System follows your Windows light/dark setting. Dark is always available.", themeSeg.obj),
+		lightModeInfo,
+	)
 
 	// Paths
 	paths := container.NewVBox()
@@ -126,7 +138,12 @@ func buildSettingsPage() (fyne.CanvasObject, fyne.CanvasObject) {
 }
 
 func sectionLabel(s string) fyne.CanvasObject {
-	return container.New(layout.NewCustomPaddedLayout(8, 2, 2, 0), mutedText(s, 10.5))
+	return uikit.SectionLabel(s)
+}
+
+func mustURL(raw string) *url.URL {
+	parsed, _ := url.Parse(raw)
+	return parsed
 }
 
 // settingsRow is a label + description on the left with a control on the right.
