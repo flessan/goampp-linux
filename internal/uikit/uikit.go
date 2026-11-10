@@ -183,6 +183,12 @@ func (n *NavItem) SetSelected(selected bool) {
 	n.applyState()
 }
 
+// RefreshState reapplies the current selection and hover colors after a theme
+// change. Call it when the host theme has been replaced.
+func (n *NavItem) RefreshState() {
+	n.applyState()
+}
+
 func (n *NavItem) CreateRenderer() fyne.WidgetRenderer {
 	n.background = canvas.NewRectangle(color.Transparent)
 	n.background.CornerRadius = 6
