@@ -4,9 +4,6 @@ package gui
 
 import (
 	"image/color"
-	"os"
-	"path/filepath"
-	"sync"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/theme"
@@ -25,7 +22,6 @@ const (
 const (
 	themePrefKey = "theme"
 	themeSystem  = "System"
-	themeLight   = "Light"
 	themeDark    = "Dark"
 )
 
@@ -113,9 +109,6 @@ type goamppTheme struct {
 func newGoamppTheme(pref string) *goamppTheme {
 	t := &goamppTheme{}
 	switch pref {
-	case themeLight:
-		v := theme.VariantLight
-		t.forced = &v
 	case themeDark:
 		v := theme.VariantDark
 		t.forced = &v
@@ -240,52 +233,6 @@ func (t *goamppTheme) Size(name fyne.ThemeSizeName) float32 {
 }
 
 func (t *goamppTheme) Font(style fyne.TextStyle) fyne.Resource {
-	if f := systemFont(style); f != nil {
-		return f
-	}
 	return theme.DefaultTheme().Font(style)
 }
 
-// systemFont uses Segoe UI (and Cascadia/Consolas for code) from the Windows
-// font folder so the panel reads like a native app. Missing files fall back to
-// Fyne's bundled font.
-var (
-	fontOnce  sync.Once
-	fontCache map[string]fyne.Resource
-)
-
-func systemFont(style fyne.TextStyle) fyne.Resource {
-	fontOnce.Do(func() {
-		fontCache = map[string]fyne.Resource{}
-		dir := filepath.Join(os.Getenv("WINDIR"), "Fonts")
-		load := func(key string, files ...string) {
-			for _, f := range files {
-				data, err := os.ReadFile(filepath.Join(dir, f))
-				if err == nil {
-					fontCache[key] = fyne.NewStaticResource(f, data)
-					return
-				}
-			}
-		}
-		load("regular", "segoeui.ttf")
-		load("bold", "seguisb.ttf", "segoeuib.ttf")
-		load("italic", "segoeuii.ttf")
-		load("mono", "CascadiaMono.ttf", "consola.ttf")
-	})
-	switch {
-	case style.Monospace:
-		return fontCache["mono"]
-	case style.Bold:
-		return fontCache["bold"]
-	case style.Italic:
-		return fontCache["italic"]
-	case style.Symbol:
-		return nil
-	}
-	return fontCache["regular"]
-}
-
-// themeColor resolves one of the theme colours for the current variant.
-func themeColor(name fyne.ThemeColorName) color.Color {
-	return theme.Color(name)
-}
