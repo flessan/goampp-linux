@@ -65,6 +65,13 @@ func MutedText(value string, size float32) *canvas.Text {
 }
 
 // SectionLabel is the standard uppercase section heading used across pages.
+// Divider returns the shared one-pixel separator used between compact rows.
+func Divider() fyne.CanvasObject {
+	line := canvas.NewRectangle(theme.Color(theme.ColorNameSeparator))
+	line.SetMinSize(fyne.NewSize(1, 1))
+	return line
+}
+
 func SectionLabel(value string) fyne.CanvasObject {
 	return Pad(MutedText(value, 10.5), 8, 2, 2, 0)
 }
