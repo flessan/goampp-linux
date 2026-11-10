@@ -20,6 +20,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	"goampp/assets"
+	"goampp/internal/uikit"
 )
 
 var (
@@ -223,27 +224,19 @@ func linuxLetterMark(name string, size float32) fyne.CanvasObject {
 }
 
 func linuxPad(obj fyne.CanvasObject, top, bottom, left, right float32) fyne.CanvasObject {
-	return container.New(layout.NewCustomPaddedLayout(top, bottom, left, right), obj)
+	return uikit.Pad(obj, top, bottom, left, right)
 }
 
 func linuxSurface(content fyne.CanvasObject, top, bottom, left, right float32) fyne.CanvasObject {
-	bg := canvas.NewRectangle(theme.Color(theme.ColorNameInputBackground))
-	bg.CornerRadius = 12
-	bg.StrokeColor = theme.Color(theme.ColorNameSeparator)
-	bg.StrokeWidth = 1
-	return container.NewStack(bg, linuxPad(content, top, bottom, left, right))
+	return uikit.Surface(content, top, bottom, left, right)
 }
 
 func linuxGap(height float32) fyne.CanvasObject {
-	gap := canvas.NewRectangle(color.Transparent)
-	gap.SetMinSize(fyne.NewSize(1, height))
-	return gap
+	return uikit.Gap(1, height)
 }
 
 func linuxHGap(width float32) fyne.CanvasObject {
-	gap := canvas.NewRectangle(color.Transparent)
-	gap.SetMinSize(fyne.NewSize(width, 1))
-	return gap
+	return uikit.Gap(width, 1)
 }
 
 func linuxStatusBadge(label string, value color.Color) fyne.CanvasObject {
