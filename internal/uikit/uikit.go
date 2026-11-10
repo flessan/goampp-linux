@@ -99,6 +99,56 @@ func PageFrame(sidebar, title, actions, bottom, pageHost fyne.CanvasObject) fyne
 	return container.NewBorder(nil, nil, sidebar, nil, container.NewStack(background, main))
 }
 
+
+ // Segmented is the shared compact tab selector used for service filters and
+ // appearance controls on both desktop platforms.
+type Segmented struct {
+	buttons  []*widget.Button
+	selected int
+	onChange func(int)
+	object   fyne.CanvasObject
+}
+
+func NewSegmented(options []string, onChange func(int)) *Segmented {
+	segmented := &Segmented{onChange: onChange}
+	row := container.NewHBox()
+	for i, option := range options {
+		index := i
+		button := widget.NewButton(option, func() { segmented.SetSelected(index, true) })
+		segmented.buttons = append(segmented.buttons, button)
+		row.Add(button)
+	}
+	background := canvas.NewRectangle(theme.Color(theme.ColorNameInputBackground))
+	background.CornerRadius = 6
+	background.StrokeColor = theme.Color(theme.ColorNameInputBorder)
+	background.StrokeWidth = 1
+	segmented.object = container.NewStack(background, Pad(row, 2, 2, 2, 2))
+	if len(options) > 0 {
+		segmented.SetSelected(0, false)
+	}
+	return segmented
+}
+
+func (s *Segmented) Object() fyne.CanvasObject { return s.object }
+
+func (s *Segmented) SetSelected(index int, notify bool) {
+	if index < 0 || index >= len(s.buttons) {
+		return
+	}
+	s.selected = index
+	for i, button := range s.buttons {
+		if i == index {
+			button.Importance = widget.MediumImportance
+		} else {
+			button.Importance = widget.LowImportance
+		}
+		button.Refresh()
+	}
+	if notify && s.onChange != nil {
+		s.onChange(index)
+	}
+}
+
 // NavItem is the shared interactive sidebar row. Both platforms use the same
 // icon size, hit target, radius, selected state and hover treatment.
 type NavItem struct {
