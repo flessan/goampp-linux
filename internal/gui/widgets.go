@@ -170,41 +170,17 @@ func (n *navItem) setSelected(selected bool) {
 // ---- segmented control ----
 
 type segmented struct {
-	buttons  []*widget.Button
-	selected int
-	onChange func(int)
-	obj      fyne.CanvasObject
+	shared *uikit.Segmented
+	obj    fyne.CanvasObject
 }
 
 func newSegmented(options []string, onChange func(int)) *segmented {
-	s := &segmented{onChange: onChange}
-	row := container.NewHBox()
-	for i, opt := range options {
-		i := i
-		b := widget.NewButton(opt, func() { s.setSelected(i, true) })
-		s.buttons = append(s.buttons, b)
-		row.Add(b)
-	}
-	bg := canvas.NewRectangle(themeColor(theme.ColorNameInputBackground))
-	bg.CornerRadius = 7
-	s.obj = container.NewStack(bg, container.New(layout.NewCustomPaddedLayout(2, 2, 2, 2), row))
-	s.setSelected(0, false)
-	return s
+	control := uikit.NewSegmented(options, onChange)
+	return &segmented{shared: control, obj: control.Object()}
 }
 
-func (s *segmented) setSelected(i int, notify bool) {
-	s.selected = i
-	for j, b := range s.buttons {
-		if j == i {
-			b.Importance = widget.MediumImportance
-		} else {
-			b.Importance = widget.LowImportance
-		}
-		b.Refresh()
-	}
-	if notify && s.onChange != nil {
-		s.onChange(i)
-	}
+func (s *segmented) setSelected(index int, notify bool) {
+	s.shared.SetSelected(index, notify)
 }
 
 // ---- tappable surface that reports right clicks ----
