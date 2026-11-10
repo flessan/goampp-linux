@@ -123,8 +123,7 @@ func linuxShowPage(key string) {
 
 func buildLinuxSidebar() fyne.CanvasObject {
 	brand := container.NewHBox(
-		linuxImage(linuxLogoResource(), 24, "GoAMPP"),
-		linuxHSpace(7),
+		linuxImage(linuxLogoResource(), 22, "GoAMPP"),
 		container.NewCenter(linuxBoldText("GoAMPP", 14)),
 	)
 	nav := container.NewVBox()
