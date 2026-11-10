@@ -86,7 +86,12 @@ func guiStatus(text string) {
 
 func Run(startHidden bool, onReady func()) {
 	a := fyneapp.NewWithID(appID)
-	a.Settings().SetTheme(newGoamppTheme(a.Preferences().StringWithFallback(themePrefKey, themeSystem)))
+	themePreference := a.Preferences().StringWithFallback(themePrefKey, themeSystem)
+	if themePreference != themeSystem && themePreference != themeDark {
+		themePreference = themeSystem
+		a.Preferences().SetString(themePrefKey, themePreference)
+	}
+	a.Settings().SetTheme(newGoamppTheme(themePreference))
 	if logo := logoResource(); logo != nil {
 		a.SetIcon(logo)
 	}
