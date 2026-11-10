@@ -106,14 +106,22 @@ var linuxServiceAssets = map[string]string{
 }
 
 var linuxToolAssets = map[string]string{
-	"PHP":      "logos/PHP.png",
-	"Composer": "logos/Composer.png",
-	"Node.js":  "logos/Node.js.png",
-	"npm":      "logos/Node.js.png",
-	"Python":   "logos/Python.png",
-	"Go":       "logos/Go.png",
-	"Java":     "logos/Java.png",
-	"Rust":     "logos/Rust.png",
+	"PHP":                 "logos/PHP.png",
+	"Composer":            "logos/Composer.png",
+	"Node.js":             "logos/Node.js.png",
+	"npm":                 "logos/Node.js.png",
+	"Python":              "logos/Python.png",
+	"Go":                  "logos/Go.png",
+	"Java":                "logos/Java.png",
+	"Rust":                "logos/Rust.png",
+	"Cargo":               "logos/Rust.png",
+	"Ruby":                "logos/Ruby.png",
+	"Bundler":             "logos/Ruby.png",
+	"Elixir":              "logos/Elixir.png",
+	"Erlang":              "logos/erlang.png",
+	"Maven":               "logos/Java.png",
+	"Gradle":              "logos/Java.png",
+	"PostgreSQL client":   "logos/PostgresSQL.png",
 }
 
 // linuxAsset loads an image from the repository's embedded asset filesystem.
