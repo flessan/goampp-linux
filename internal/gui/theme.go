@@ -5,7 +5,6 @@ package gui
 import (
 	"image/color"
 
-	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/theme"
 
 	"goampp/internal/uikit"
