@@ -44,7 +44,7 @@ func buildVhostsPage() (fyne.CanvasObject, fyne.CanvasObject) {
 		},
 	)
 	vhostUI.list.OnSelected = func(id widget.ListItemID) { selectVhost(id) }
-	vhostUI.empty = container.NewCenter(mutedText("No virtual hosts yet — add one on the right.", 13))
+	vhostUI.empty = uikit.EmptyVirtualHosts()
 	list := container.NewStack(vhostUI.list, vhostUI.empty)
 
 	vhostUI.name = widget.NewEntry()
@@ -66,11 +66,9 @@ func buildVhostsPage() (fyne.CanvasObject, fyne.CanvasObject) {
 		d.Show()
 	})
 
-	form := container.New(layout.NewFormLayout(),
-		widget.NewLabel("Domain"), container.NewBorder(nil, nil, nil, minSized(vhostUI.ext, 110, 0), vhostUI.name),
-		widget.NewLabel("Document root"), container.NewBorder(nil, nil, nil, browse, vhostUI.docroot),
-		widget.NewLabel("Port"), container.NewBorder(nil, nil, minSized(vhostUI.port, 90, 0), nil),
-		widget.NewLabel("Server"), minSized(vhostUI.server, 140, 0),
+	form := uikit.VirtualHostForm(
+		container.NewBorder(nil, nil, nil, minSized(vhostUI.ext, 110, 0), vhostUI.name),
+		container.NewBorder(nil, nil, nil, browse, vhostUI.docroot), vhostUI.port, vhostUI.server,
 	)
 
 	save := importantButton("Save", theme.DocumentSaveIcon(), widget.HighImportance, saveVhostForm)

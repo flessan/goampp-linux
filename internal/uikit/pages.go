@@ -78,3 +78,19 @@ func SettingsPathRow(label, path string, open func()) fyne.CanvasObject {
 	value.Importance = widget.LowImportance
 	return Pad(container.NewBorder(nil, nil, MinSize(widget.NewLabel(label), 120, 0), button, value), 0, 0, 10, 4)
 }
+
+// VirtualHostForm is the Windows field order and sizing. Domain and document
+// root controls may include platform-specific selectors or browse buttons.
+func VirtualHostForm(domain, documentRoot, port, server fyne.CanvasObject) fyne.CanvasObject {
+	return container.New(layout.NewFormLayout(),
+		widget.NewLabel("Domain"), domain,
+		widget.NewLabel("Document root"), documentRoot,
+		widget.NewLabel("Port"), container.NewBorder(nil, nil, MinSize(port, 90, 0), nil),
+		widget.NewLabel("Server"), MinSize(server, 140, 0),
+	)
+}
+
+// EmptyVirtualHosts is shown in the domain list when there are no entries.
+func EmptyVirtualHosts() fyne.CanvasObject {
+	return container.NewCenter(MutedText("No virtual hosts yet — add one on the right.", 13))
+}

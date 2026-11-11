@@ -33,3 +33,20 @@ func TestStartupAndSettingsPages(t *testing.T) {
 		t.Fatalf("settings page = %T, want scroll", page)
 	}
 }
+
+func TestVirtualHostFormFieldOrder(t *testing.T) {
+	test.NewTempApp(t)
+	domain, root := widget.NewEntry(), widget.NewEntry()
+	port := widget.NewEntry()
+	server := widget.NewSelect([]string{"apache"}, nil)
+	form := VirtualHostForm(domain, root, port, server).(*fyne.Container)
+	if len(form.Objects) != 8 || form.Objects[1] != domain || form.Objects[3] != root {
+		t.Fatal("virtual host fields are not in the reference order")
+	}
+	if form.Objects[0].(*widget.Label).Text != "Domain" || form.Objects[6].(*widget.Label).Text != "Server" {
+		t.Fatal("virtual host field labels differ from the reference")
+	}
+	if EmptyVirtualHosts() == nil {
+		t.Fatal("virtual host empty state missing")
+	}
+}
