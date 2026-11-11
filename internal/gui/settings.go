@@ -117,13 +117,9 @@ func buildSettingsPage() (fyne.CanvasObject, fyne.CanvasObject) {
 		container.NewHBox(widget.NewHyperlink("GitHub", gh), widget.NewHyperlink("imtaqin.id", site), widget.NewHyperlink("Donate", donate)),
 		container.NewVBox(boldText("GoAMPP "+core.Version, 13), mutedText("Native Windows local dev stack · by imtaqin", 11.5)))
 
-	content := container.NewVBox(
-		sectionLabel("APPEARANCE"), newListCard(appearance),
-		sectionLabel("PATHS"), newListCard(paths),
-		sectionLabel("TOOLS"), newListCard(container.New(layout.NewCustomPaddedLayout(4, 4, 6, 6), tools)),
-		sectionLabel("ABOUT"), newListCard(container.New(layout.NewCustomPaddedLayout(8, 8, 12, 8), about)),
-	)
-	return nil, container.NewVScroll(content)
+	return nil, uikit.SettingsPage(appearance, paths,
+		container.New(layout.NewCustomPaddedLayout(4, 4, 6, 6), tools),
+		container.New(layout.NewCustomPaddedLayout(8, 8, 12, 8), about), nil)
 }
 
 func sectionLabel(s string) fyne.CanvasObject {

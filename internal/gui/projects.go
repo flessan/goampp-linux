@@ -18,6 +18,7 @@ import (
 	"goampp/internal/config"
 	"goampp/internal/core"
 	"goampp/internal/projects"
+	"goampp/internal/uikit"
 )
 
 var projUI struct {
@@ -114,8 +115,7 @@ func buildProjectsPage() (fyne.CanvasObject, fyne.CanvasObject) {
 		}
 		chips.Add(p.obj)
 	}
-	newCardObj := newTitledCard("New project", "Scaffolds into www/, adds a vhost and the hosts entry.",
-		nil, container.NewVBox(form, preview, vSpace(4), container.NewBorder(nil, nil, chips, create)))
+	creation := container.NewVBox(form, preview, vSpace(4), container.NewBorder(nil, nil, chips, create))
 
 	projUI.list = widget.NewList(
 		func() int { return len(core.App.Cfg.Projects) },
@@ -127,14 +127,9 @@ func buildProjectsPage() (fyne.CanvasObject, fyne.CanvasObject) {
 			o.(*projectRow).bind(id, core.App.Cfg.Projects[id])
 		},
 	)
-	projUI.empty = container.NewCenter(container.NewVBox(
-		container.NewCenter(widget.NewIcon(theme.FolderIcon())),
-		container.NewCenter(mutedText("No projects yet — create one above.", 13)),
-	))
-	listCard := newTitledCard("Your projects", "", nil, container.NewStack(projUI.list, projUI.empty))
-
-	body := container.NewBorder(container.NewVBox(newCardObj, vSpace(8)), nil, nil, nil, listCard)
-	return nil, body
+	projUI.empty = uikit.EmptyProjects()
+	return nil, uikit.ProjectsPage(creation, container.NewStack(projUI.list, projUI.empty),
+		"Scaffolds into www/, adds a vhost and the hosts entry.")
 }
 
 type projectRow struct {
@@ -158,8 +153,7 @@ func newProjectRow() *projectRow {
 }
 
 func (r *projectRow) CreateRenderer() fyne.WidgetRenderer {
-	return widget.NewSimpleRenderer(container.NewBorder(nil, nil,
-		container.NewHBox(hSpace(4), container.NewVBox(r.title, r.sub)),
+	return widget.NewSimpleRenderer(uikit.ProjectRow(r.title, r.sub,
 		container.NewHBox(container.NewCenter(r.fw.obj), r.open, r.folder, r.del)))
 }
 

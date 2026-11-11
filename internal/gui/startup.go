@@ -10,6 +10,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	"goampp/internal/core"
+	"goampp/internal/uikit"
 )
 
 var startupUI struct {
@@ -24,15 +25,11 @@ func buildStartupPage() (fyne.CanvasObject, fyne.CanvasObject) {
 		}
 		core.ToggleAutoStart()
 	})
-	winCard := newTitledCard("Windows", "", nil, startupUI.windows)
 
 	startupUI.list = container.NewGridWrap(fyne.NewSize(300, 56))
-	svcCard := newTitledCard("Services started by GoAMPP",
-		"Ticked services start every time GoAMPP opens. Only installed services are listed.",
-		nil, container.NewVScroll(startupUI.list))
-
 	refreshStartupPage()
-	return nil, container.NewBorder(container.NewVBox(winCard, vSpace(8)), nil, nil, nil, svcCard)
+	return nil, uikit.StartupPage("Windows", startupUI.windows, container.NewVScroll(startupUI.list),
+		"Services started by GoAMPP", "Ticked services start every time GoAMPP opens. Only installed services are listed.")
 }
 
 func refreshStartupPage() {
@@ -64,7 +61,7 @@ func refreshStartupPage() {
 			}
 			core.App.AppendLog(fmt.Sprintf("startup services: %s → %s", name, state))
 		}
-		startupUI.list.Add(newCard(container.NewBorder(nil, nil, serviceAvatar(name, 24), nil, check)))
+		startupUI.list.Add(uikit.StartupServiceCard(serviceAvatar(name, 24), check, nil))
 	}
 	if len(startupUI.list.Objects) == 0 {
 		startupUI.list.Add(mutedText("No installed services yet — install some from Services.", 13))
