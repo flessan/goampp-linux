@@ -1,0 +1,19 @@
+#!/bin/sh
+# Optional hook: opt in by setting both goampp.coauthorName and
+# goampp.coauthorEmail, then setting core.hooksPath to tools/hooks.
+set -eu
+message=$1
+name=$(git config --get goampp.coauthorName || :)
+email=$(git config --get goampp.coauthorEmail || :)
+[ -n "$name" ] && [ -n "$email" ] || {
+    echo 'Configure goampp.coauthorName and goampp.coauthorEmail before using this hook.' >&2
+    exit 1
+}
+expected="Co-authored-by: $name <$email>"
+trailers=$(grep -i '^Co-authored-by:' "$message" || :)
+if [ -z "$trailers" ]; then
+    printf '\n%s\n' "$expected" >> "$message"
+elif [ "$trailers" != "$expected" ]; then
+    echo 'Commit has unexpected or multiple Co-authored-by trailers; edit the message.' >&2
+    exit 1
+fi

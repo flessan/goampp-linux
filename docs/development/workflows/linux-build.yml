@@ -1,0 +1,35 @@
+name: Linux build and packages (template)
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Install build and packaging dependencies
+        run: |
+          scripts/ci/install-linux-deps.sh package
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Build
+        run: scripts/ci/linux.sh build
+      - name: Package
+        env:
+          VERSION: dev
+        run: scripts/ci/linux.sh package
+      - uses: actions/upload-artifact@v7
+        with:
+          name: linux-packages
+          path: |
+            dist/packages/*.AppImage
+            dist/packages/*.deb
+            dist/packages/*.rpm
+            dist/packages/*.tar.gz
+          if-no-files-found: error
+          retention-days: 7

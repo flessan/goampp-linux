@@ -22,37 +22,24 @@ import (
 )
 
 func buildSettingsPage() (fyne.CanvasObject, fyne.CanvasObject) {
-	// Appearance
-	themes := []string{themeSystem, themeLight, themeDark}
-	themeSeg := newSegmented(themes, func(i int) {
-		core.App.Fyne.Preferences().SetString(themePrefKey, themes[i])
-		core.App.Fyne.Settings().SetTheme(newGoamppTheme(themes[i]))
-	})
-	current := core.App.Fyne.Preferences().StringWithFallback(themePrefKey, themeSystem)
-	for i, t := range themes {
-		if t == current {
-			themeSeg.setSelected(i, false)
-		}
-	}
-	appearance := uikit.SettingsRow("Theme", "System follows the Windows light/dark setting.", themeSeg.obj)
+	appearance := uikit.AppearanceControl(core.App.Fyne, themePrefKey,
+		"System follows the Windows light/dark setting.", func(value string) {
+			core.App.Fyne.Settings().SetTheme(newGoamppTheme(value))
+		})
 
 	// Paths
 	paths := container.NewVBox()
 	addPath := func(label, path string, isDir bool) {
-		open := lowButton("", theme.FolderOpenIcon(), func() {
+		if len(paths.Objects) > 0 {
+			paths.Add(rowDivider())
+		}
+		paths.Add(uikit.SettingsPathRow(label, path, func() {
 			if isDir {
 				core.OpenFolder(path)
 			} else {
 				core.OpenFolder(filepath.Dir(path))
 			}
-		})
-		if len(paths.Objects) > 0 {
-			paths.Add(rowDivider())
-		}
-		value := truncLabel(path)
-		value.Importance = widget.LowImportance
-		paths.Add(container.New(layout.NewCustomPaddedLayout(0, 0, 10, 4),
-			container.NewBorder(nil, nil, minSized(widget.NewLabel(label), 120, 0), open, value)))
+		}))
 	}
 	addPath("Install folder", core.App.BaseDir, true)
 	addPath("Config", filepath.Join(core.App.BaseDir, "config.json"), false)
@@ -117,13 +104,9 @@ func buildSettingsPage() (fyne.CanvasObject, fyne.CanvasObject) {
 		container.NewHBox(widget.NewHyperlink("GitHub", gh), widget.NewHyperlink("imtaqin.id", site), widget.NewHyperlink("Donate", donate)),
 		container.NewVBox(boldText("GoAMPP "+core.Version, 13), mutedText("Native Windows local dev stack · by imtaqin", 11.5)))
 
-	content := container.NewVBox(
-		sectionLabel("APPEARANCE"), newListCard(appearance),
-		sectionLabel("PATHS"), newListCard(paths),
-		sectionLabel("TOOLS"), newListCard(container.New(layout.NewCustomPaddedLayout(4, 4, 6, 6), tools)),
-		sectionLabel("ABOUT"), newListCard(container.New(layout.NewCustomPaddedLayout(8, 8, 12, 8), about)),
-	)
-	return nil, container.NewVScroll(content)
+	return nil, uikit.SettingsPage(appearance, paths,
+		container.New(layout.NewCustomPaddedLayout(4, 4, 6, 6), tools),
+		container.New(layout.NewCustomPaddedLayout(8, 8, 12, 8), about), nil)
 }
 
 func sectionLabel(s string) fyne.CanvasObject {

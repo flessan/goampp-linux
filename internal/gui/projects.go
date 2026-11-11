@@ -11,13 +11,13 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
 	"goampp/internal/config"
 	"goampp/internal/core"
 	"goampp/internal/projects"
+	"goampp/internal/uikit"
 )
 
 var projUI struct {
@@ -61,49 +61,50 @@ func buildProjectsPage() (fyne.CanvasObject, fyne.CanvasObject) {
 	updatePreview()
 
 	create := importantButton("Create project", theme.ContentAddIcon(), widget.HighImportance, nil)
+	creator := &uikit.ProjectCreator{
+		Prepare: func(request uikit.ProjectRequest) (uikit.ProjectRequest, error) {
+			if projects.FrameworkByName(request.Framework) == nil {
+				return request, fmt.Errorf("Pick a framework first.")
+			}
+			request.Name = core.Slugify(request.Name)
+			request.Domain = strings.TrimSpace(request.Domain)
+			if request.Domain == "" {
+				request.Domain = request.Name
+			}
+			request.Domain += ext.Selected
+			return request, nil
+		},
+		Create: func(request uikit.ProjectRequest) (string, error) {
+			err := projects.CreateProject(core.App.Cfg, projects.FrameworkByName(request.Framework), request.Name, request.Domain, core.App.AppendLog)
+			return "", err
+		},
+		Dispatch: core.UiDo,
+		Window:   core.App.Win,
+		Started: func(request uikit.ProjectRequest) {
+			core.App.AppendLog(fmt.Sprintf("projects: creating '%s' (%s) at %s ...", request.Name, request.Framework, request.Domain))
+			core.SetStatus(fmt.Sprintf("Creating %s...", request.Name))
+			create.Disable()
+		},
+		Finished: func(request uikit.ProjectRequest, _ string, err error) {
+			create.Enable()
+			if err != nil {
+				core.App.AppendLog("projects: " + err.Error())
+				dialog.ShowError(err, core.App.Win)
+				return
+			}
+			core.SetStatus(fmt.Sprintf("Created %s — http://%s", request.Name, request.Domain))
+			go core.RestartWebServerIfRunning()
+			name.SetText("")
+			domain.SetText("")
+			refreshProjectList()
+			refreshVhostList()
+		},
+	}
 	create.OnTapped = func() {
-		f := projects.FrameworkByName(framework.Selected)
-		if f == nil {
-			dialog.ShowInformation("Projects", "Pick a framework first.", core.App.Win)
-			return
-		}
-		slug := core.Slugify(name.Text)
-		if slug == "" {
-			dialog.ShowInformation("Projects", "A project name is required.", core.App.Win)
-			return
-		}
-		d := strings.TrimSpace(domain.Text)
-		if d == "" {
-			d = slug
-		}
-		full := d + ext.Selected
-		core.App.AppendLog(fmt.Sprintf("projects: creating '%s' (%s) at %s ...", slug, f.Name, full))
-		core.SetStatus(fmt.Sprintf("Creating %s...", slug))
-		create.Disable()
-		go func() {
-			err := projects.CreateProject(core.App.Cfg, f, slug, full, core.App.AppendLog)
-			core.UiDo(func() {
-				create.Enable()
-				if err != nil {
-					core.App.AppendLog("projects: " + err.Error())
-					dialog.ShowError(err, core.App.Win)
-					return
-				}
-				core.SetStatus(fmt.Sprintf("Created %s — http://%s", slug, full))
-				go core.RestartWebServerIfRunning()
-				name.SetText("")
-				domain.SetText("")
-				refreshProjectList()
-				refreshVhostList()
-			})
-		}()
+		creator.Submit(uikit.ProjectRequest{Name: name.Text, Framework: framework.Selected, Domain: domain.Text})
 	}
 
-	form := container.New(layout.NewFormLayout(),
-		widget.NewLabel("Framework"), framework,
-		widget.NewLabel("Name"), name,
-		widget.NewLabel("Domain"), container.NewBorder(nil, nil, nil, minSized(ext, 110, 0), domain),
-	)
+	form := uikit.ProjectForm(framework, name, container.NewBorder(nil, nil, nil, minSized(ext, 110, 0), domain))
 	chips := container.NewHBox()
 	for _, rs := range core.RuntimeStatuses() {
 		p := newStatusPill()
@@ -114,8 +115,7 @@ func buildProjectsPage() (fyne.CanvasObject, fyne.CanvasObject) {
 		}
 		chips.Add(p.obj)
 	}
-	newCardObj := newTitledCard("New project", "Scaffolds into www/, adds a vhost and the hosts entry.",
-		nil, container.NewVBox(form, preview, vSpace(4), container.NewBorder(nil, nil, chips, create)))
+	creation := container.NewVBox(form, preview, vSpace(4), container.NewBorder(nil, nil, chips, create))
 
 	projUI.list = widget.NewList(
 		func() int { return len(core.App.Cfg.Projects) },
@@ -127,14 +127,9 @@ func buildProjectsPage() (fyne.CanvasObject, fyne.CanvasObject) {
 			o.(*projectRow).bind(id, core.App.Cfg.Projects[id])
 		},
 	)
-	projUI.empty = container.NewCenter(container.NewVBox(
-		container.NewCenter(widget.NewIcon(theme.FolderIcon())),
-		container.NewCenter(mutedText("No projects yet — create one above.", 13)),
-	))
-	listCard := newTitledCard("Your projects", "", nil, container.NewStack(projUI.list, projUI.empty))
-
-	body := container.NewBorder(container.NewVBox(newCardObj, vSpace(8)), nil, nil, nil, listCard)
-	return nil, body
+	projUI.empty = uikit.EmptyProjects()
+	return nil, uikit.ProjectsPage(creation, container.NewStack(projUI.list, projUI.empty),
+		"Scaffolds into www/, adds a vhost and the hosts entry.")
 }
 
 type projectRow struct {
@@ -158,8 +153,7 @@ func newProjectRow() *projectRow {
 }
 
 func (r *projectRow) CreateRenderer() fyne.WidgetRenderer {
-	return widget.NewSimpleRenderer(container.NewBorder(nil, nil,
-		container.NewHBox(hSpace(4), container.NewVBox(r.title, r.sub)),
+	return widget.NewSimpleRenderer(uikit.ProjectRow(r.title, r.sub,
 		container.NewHBox(container.NewCenter(r.fw.obj), r.open, r.folder, r.del)))
 }
 

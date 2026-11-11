@@ -21,7 +21,6 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/driver/desktop"
-	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
@@ -243,8 +242,6 @@ func Run() {
 		nil, nil, nil,
 		container.NewVScroll(linuxPad(serviceList, 4, 10, 2, 2)),
 	)
-	rootLabel := widget.NewLabel(projectDir)
-	rootLabel.Wrapping = fyne.TextWrapBreak
 	projectNameEntry := widget.NewEntry()
 	projectNameEntry.SetPlaceHolder("my-first-project")
 	templateSelect := widget.NewSelect(projectCreationOptions(), nil)
@@ -262,11 +259,7 @@ func Run() {
 		projectList.Objects = nil
 		names := listProjects(projectDir)
 		if len(names) == 0 {
-			projectList.Add(container.NewCenter(container.NewVBox(
-				container.NewCenter(widget.NewIcon(theme.FolderIcon())),
-				container.NewCenter(widget.NewLabel("No projects yet")),
-				container.NewCenter(widget.NewLabel("Create a starter above to get started.")),
-			)))
+			projectList.Add(uikit.EmptyProjects())
 		} else {
 			for _, name := range names {
 				projectName := name
@@ -330,66 +323,68 @@ func Run() {
 					showProjectLog(w, projectName, logPath)
 				})
 				actions = append(actions, logButton, openButton)
-				nameLabel := widget.NewLabelWithStyle(projectName, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+				nameLabel := linuxBoldText(projectName, 14)
 				pathLabel := widget.NewLabel(filepath.Join(projectDir, projectName))
-				pathLabel.Wrapping = fyne.TextWrapBreak
-				projectIdentity := container.NewHBox(linuxLetterMark(projectName, 38), linuxHGap(10), nameLabel)
-				projectHeader := container.NewBorder(nil, nil, projectIdentity, container.NewHBox(actions...), linuxGap(1))
-				projectRow := container.NewVBox(projectHeader, linuxPad(pathLabel, 4, 0, 48, 0))
-				projectList.Add(linuxSurface(projectRow, 8, 8, 10, 10))
-				projectList.Add(linuxGap(8))
+				pathLabel.Truncation = fyne.TextTruncateEllipsis
+				pathLabel.Importance = widget.LowImportance
+				projectList.Add(uikit.ProjectRow(nameLabel, pathLabel, container.NewHBox(actions...)))
+				projectList.Add(uikit.Divider())
 			}
 		}
 		projectList.Refresh()
 	}
-	var createButton *widget.Button
-	createButton = widget.NewButtonWithIcon("Create project", theme.ContentAddIcon(), func() {
-		name := strings.TrimSpace(projectNameEntry.Text)
-		templateName := templateSelect.Selected
-		if !projectNamePattern.MatchString(name) {
-			dialog.ShowInformation("Projects", "Use 1–48 letters, numbers, underscores, or hyphens. The first character must be a letter or number.", w)
-			return
-		}
-		if templateName == "" {
-			dialog.ShowInformation("Projects", "Choose a project template first.", w)
-			return
-		}
-		createButton.Disable()
-		projectNameEntry.Disable()
-		templateSelect.Disable()
-		projectStatus.SetText("Creating " + templateName + " in the background… Output is added to the activity log.")
-		linuxSetStatus("Creating project: " + name)
-		linuxAddLog("Creating project " + name + " using " + templateName)
-		go func() {
-			created, err := createProjectWithLog(projectDir, name, templateName, func(line string) {
-				linuxAddLog("[" + name + "] " + line)
+	createButton := widget.NewButtonWithIcon("Create project", theme.ContentAddIcon(), nil)
+	creator := &uikit.ProjectCreator{
+		Prepare: func(request uikit.ProjectRequest) (uikit.ProjectRequest, error) {
+			request.Name = strings.TrimSpace(request.Name)
+			if !projectNamePattern.MatchString(request.Name) {
+				return request, fmt.Errorf("Use 1–48 letters, numbers, underscores, or hyphens. The first character must be a letter or number.")
+			}
+			return request, nil
+		},
+		Create: func(request uikit.ProjectRequest) (string, error) {
+			return createProjectWithLog(projectDir, request.Name, request.Framework, func(line string) {
+				linuxAddLog("[" + request.Name + "] " + line)
 			})
-			fyne.Do(func() {
-				createButton.Enable()
-				projectNameEntry.Enable()
-				templateSelect.Enable()
-				if err != nil {
-					if created != "" {
-						projectStatus.SetText("Project creation failed. Partial files were kept at " + created + ". Inspect Logs before retrying.")
-						linuxAddLog("Project creation failed for " + name + ": " + err.Error())
-						refreshProjects()
-					} else {
-						projectStatus.SetText("Could not create " + name + ": " + err.Error())
-						linuxAddLog("Project creation failed for " + name + ": " + err.Error())
-					}
-					linuxSetStatus("Project creation failed: " + name)
-					dialog.ShowError(err, w)
-					return
+		},
+		Dispatch: fyne.Do,
+		Window:   w,
+		Started: func(request uikit.ProjectRequest) {
+			createButton.Disable()
+			projectNameEntry.Disable()
+			templateSelect.Disable()
+			projectStatus.SetText("Creating " + request.Framework + " in the background… Output is added to the activity log.")
+			linuxSetStatus("Creating project: " + request.Name)
+			linuxAddLog("Creating project " + request.Name + " using " + request.Framework)
+		},
+		Finished: func(request uikit.ProjectRequest, created string, err error) {
+			createButton.Enable()
+			projectNameEntry.Enable()
+			templateSelect.Enable()
+			if err != nil {
+				if created != "" {
+					projectStatus.SetText("Project creation failed. Partial files were kept at " + created + ". Inspect Logs before retrying.")
+					linuxAddLog("Project creation failed for " + request.Name + ": " + err.Error())
+					refreshProjects()
+				} else {
+					projectStatus.SetText("Could not create " + request.Name + ": " + err.Error())
+					linuxAddLog("Project creation failed for " + request.Name + ": " + err.Error())
 				}
-				projectStatus.SetText("Created " + created + ". See README.md or Logs for next steps.")
-				linuxAddLog("Created project " + filepath.Base(created) + " using " + templateName)
-				linuxSetStatus("Project created: " + filepath.Base(created))
-				projectNameEntry.SetText("")
-				refreshProjects()
-				dialog.ShowInformation("Project created", "Your project files are ready. GoAMPP keeps framework creation output in the project's Logs file.", w)
-			})
-		}()
-	})
+				linuxSetStatus("Project creation failed: " + request.Name)
+				dialog.ShowError(err, w)
+				return
+			}
+			projectStatus.SetText("Created " + created + ". See README.md or Logs for next steps.")
+			linuxAddLog("Created project " + filepath.Base(created) + " using " + request.Framework)
+			linuxSetStatus("Project created: " + filepath.Base(created))
+			projectNameEntry.SetText("")
+			refreshProjects()
+			dialog.ShowInformation("Project created", "Your project files are ready. GoAMPP keeps framework creation output in the project's Logs file.", w)
+		},
+	}
+	createButton.OnTapped = func() {
+		creator.Submit(uikit.ProjectRequest{Name: projectNameEntry.Text, Framework: templateSelect.Selected})
+	}
 	projectActions := container.NewHBox(
 		widget.NewButtonWithIcon("Open folder", theme.FolderOpenIcon(), func() {
 			if err := openExternal(projectDir); err != nil {
@@ -412,27 +407,13 @@ func Run() {
 		}),
 		widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), refreshProjects),
 	)
-	createCard := linuxSurface(container.NewVBox(
-		container.NewVBox(
-			widget.NewLabelWithStyle("New project", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-			widget.NewLabel("Create a safe starter in your local GoAMPP workspace."),
-		),
-		linuxVSpace(8),
-		container.New(layout.NewFormLayout(),
-			widget.NewLabel("Name"), projectNameEntry,
-			widget.NewLabel("Template"), templateSelect,
-		),
-		linuxVSpace(4),
+	createButton.Importance = widget.HighImportance
+	creation := container.NewVBox(
+		uikit.ProjectForm(templateSelect, projectNameEntry, nil),
 		templateDescription,
-		linuxVSpace(8),
+		linuxVSpace(4),
 		container.NewBorder(nil, nil, nil, createButton, projectStatus),
-	), 10, 10, 12, 12)
-	projectsCard := linuxSurface(container.NewVBox(
-		widget.NewLabelWithStyle("Your projects", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		widget.NewLabel("Run a starter, inspect its log, or open its folder."),
-		linuxVSpace(8),
-		projectList,
-	), 10, 10, 12, 12)
+	)
 	installCard := linuxSurface(container.NewVBox(
 		widget.NewLabelWithStyle("System packages", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewLabel("GoAMPP uses packages managed by your distribution and never silently installs system services."),
@@ -450,31 +431,18 @@ func Run() {
 			dialog.ShowCustom("Native package command", "Close", container.NewVBox(entry, copyButton), w)
 		}),
 	), 10, 10, 12, 12)
-	projectsPage := container.NewVScroll(linuxPad(container.NewVBox(
-		createCard,
-		linuxVSpace(8),
-		projectsCard,
-		linuxVSpace(8),
-		installCard,
-	), 0, 12, 0, 0))
+	// Keep the package-manager guidance available below the project list.
+	projectContents := container.NewVScroll(container.NewVBox(projectList, linuxVSpace(8), installCard))
+	projectsPage := uikit.ProjectsPage(creation, projectContents,
+		"Create a safe starter in your local GoAMPP workspace.")
 	refreshProjects()
 
-	themes := []string{"System", "Light", "Dark"}
-	themeControl := newLinuxSegmented(themes, func(index int) {
-		preference := themes[index]
-		a.Preferences().SetString("theme", preference)
+	appearanceRow := uikit.AppearanceControl(a, "theme", "System follows your Linux desktop appearance.", func(preference string) {
 		a.Settings().SetTheme(newLinuxGoamppTheme(preference))
 		refreshLinuxThemeSurfaces()
 		linuxSetStatus("Theme set to " + preference)
 		linuxAddLog("Appearance theme changed to " + preference)
 	})
-	for i, preference := range themes {
-		if preference == themePreference {
-			themeControl.setSelected(i, false)
-			break
-		}
-	}
-	appearanceRow := uikit.SettingsRow("Theme", "System follows your Linux desktop appearance.", themeControl.obj)
 
 	var trayPreference fyne.CanvasObject
 	if trayAvailable {
@@ -487,80 +455,70 @@ func Run() {
 			}
 		})
 		closeToTray.SetChecked(a.Preferences().BoolWithFallback("close-to-tray", false))
-		trayPreference = linuxSurface(container.NewVBox(
+		trayPreference = linuxPad(container.NewVBox(
 			linuxBoldText("Window behavior", 13),
 			closeToTray,
 			linuxMutedText("The system-tray menu can reopen or quit the application.", 11.5),
 		), 8, 8, 12, 12)
 	} else {
-		trayPreference = linuxSurface(container.NewVBox(
+		trayPreference = linuxPad(container.NewVBox(
 			linuxBoldText("Window behavior", 13),
 			widget.NewLabel("Your current Linux desktop driver does not expose a system-tray integration."),
 		), 8, 8, 12, 12)
 	}
 
-	settingsPage := container.NewVScroll(linuxPad(container.NewVBox(
-		linuxSectionLabel("BEHAVIOR"),
-		trayPreference,
-		linuxSectionLabel("APPEARANCE"),
-		linuxSurface(appearanceRow, 2, 2, 0, 0),
-		linuxSectionLabel("PATHS"),
-		linuxSurface(container.NewVBox(
-			widget.NewLabelWithStyle("Project workspace", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-			rootLabel,
-			widget.NewButtonWithIcon("Open workspace", theme.FolderOpenIcon(), func() {
-				if err := openExternal(projectDir); err != nil {
+	settingsPaths := uikit.SettingsPathRow("Project workspace", projectDir, func() {
+		if err := openExternal(projectDir); err != nil {
+			dialog.ShowError(err, w)
+		}
+	})
+	settingsTools := linuxPad(container.NewVBox(
+		widget.NewLabelWithStyle("System package manager", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		widget.NewLabel("Service installation and system changes remain explicit user actions."),
+		container.NewHBox(
+			widget.NewButtonWithIcon("Open terminal", theme.ComputerIcon(), func() {
+				shell := "bash"
+				if _, err := exec.LookPath(shell); err != nil {
+					shell = "sh"
+				}
+				if err := openLinuxTerminal(projectDir, shell, "-l"); err != nil {
 					dialog.ShowError(err, w)
 				}
 			}),
-		), 10, 10, 12, 12),
-		linuxSectionLabel("TOOLS"),
-		linuxSurface(container.NewVBox(
-			widget.NewLabelWithStyle("System package manager", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-			widget.NewLabel("Service installation and system changes remain explicit user actions."),
-			container.NewHBox(
-				widget.NewButtonWithIcon("Open terminal", theme.ComputerIcon(), func() {
-					shell := "bash"
-					if _, err := exec.LookPath(shell); err != nil {
-						shell = "sh"
-					}
-					if err := openLinuxTerminal(projectDir, shell, "-l"); err != nil {
-						dialog.ShowError(err, w)
-					}
-				}),
-				widget.NewButtonWithIcon("PostgreSQL console", theme.ComputerIcon(), func() {
-					if _, err := exec.LookPath("psql"); err != nil {
-						showLinuxPackageCommand(w, "PostgreSQL client", true)
-						return
-					}
-					if err := openLinuxTerminal(projectDir, "psql"); err != nil {
-						dialog.ShowError(err, w)
-					}
-				}),
-				widget.NewButtonWithIcon("Copy install command", theme.ContentCopyIcon(), func() {
-					w.Clipboard().SetContent(suggestedInstallCommand())
-					linuxAddLog("Suggested package command copied")
-					dialog.ShowInformation("Copied", "Installation command copied to clipboard.", w)
-				}),
-			),
-		), 10, 10, 12, 12),
-		linuxSectionLabel("ABOUT"),
-		linuxSurface(container.NewHBox(
-			linuxImage(linuxLogoResource(), 40, "GoAMPP"),
-			linuxHSpace(12),
-			container.NewVBox(
-				linuxBoldText("GoAMPP for Linux", 13),
-				linuxMutedText("Native desktop panel for distribution-managed services.", 11.5),
-				linuxMutedText("Early Linux mode · Windows feature parity is still in progress.", 10.5),
-			),
-		), 10, 10, 12, 12),
-	), 8, 12, 14, 14))
+			widget.NewButtonWithIcon("PostgreSQL console", theme.ComputerIcon(), func() {
+				if _, err := exec.LookPath("psql"); err != nil {
+					showLinuxPackageCommand(w, "PostgreSQL client", true)
+					return
+				}
+				if err := openLinuxTerminal(projectDir, "psql"); err != nil {
+					dialog.ShowError(err, w)
+				}
+			}),
+			widget.NewButtonWithIcon("Copy install command", theme.ContentCopyIcon(), func() {
+				w.Clipboard().SetContent(suggestedInstallCommand())
+				linuxAddLog("Suggested package command copied")
+				dialog.ShowInformation("Copied", "Installation command copied to clipboard.", w)
+			}),
+		),
+	), 10, 10, 12, 12)
+	settingsAbout := linuxPad(container.NewHBox(
+		linuxImage(linuxLogoResource(), 40, "GoAMPP"),
+		linuxHSpace(12),
+		container.NewVBox(
+			linuxBoldText("GoAMPP for Linux", 13),
+			linuxMutedText("Native desktop panel for distribution-managed services.", 11.5),
+			linuxMutedText("Early Linux mode · Windows feature parity is still in progress.", 10.5),
+		),
+	), 8, 8, 12, 8)
+	settingsPage := uikit.SettingsPage(appearanceRow, settingsPaths, settingsTools, settingsAbout, trayPreference)
 
+	editorActions, editorPage := buildLinuxConfigEditorPage(w)
+	vhostActions, vhostPage := buildLinuxVHostsPage(w, projectDir)
 	pages := []*linuxPage{
 		{key: "services", title: "Services", icon: theme.ComputerIcon(), actions: refreshButton, body: servicePage},
 		{key: "projects", title: "Projects", icon: theme.FolderIcon(), actions: projectActions, body: projectsPage},
-		{key: "vhosts", title: "Virtual Hosts", icon: theme.HomeIcon(), body: buildLinuxVHostsPage(w, projectDir)},
-		{key: "editor", title: "Config Editor", icon: theme.DocumentCreateIcon(), body: buildLinuxConfigEditorPage(w)},
+		{key: "vhosts", title: "Virtual Hosts", icon: theme.HomeIcon(), actions: vhostActions, body: vhostPage},
+		{key: "editor", title: "Config Editor", icon: theme.DocumentCreateIcon(), actions: editorActions, body: editorPage},
 		{key: "startup", title: "Startup", icon: theme.MediaPlayIcon(), body: buildLinuxStartupPage(w)},
 		{key: "settings", title: "Settings", icon: theme.SettingsIcon(), body: settingsPage},
 	}

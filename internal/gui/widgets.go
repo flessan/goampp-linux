@@ -22,18 +22,7 @@ func newCard(content fyne.CanvasObject) fyne.CanvasObject {
 
 // newTitledCard is a card with a small heading and optional actions on the right.
 func newTitledCard(title, subtitle string, actions fyne.CanvasObject, body fyne.CanvasObject) fyne.CanvasObject {
-	head := container.NewVBox(boldText(title, 13))
-	if subtitle != "" {
-		head.Add(mutedText(subtitle, 11.5))
-	}
-	var top fyne.CanvasObject = head
-	if actions != nil {
-		top = container.NewBorder(nil, nil, nil, container.NewCenter(actions), head)
-	}
-	if body == nil {
-		return newCard(top)
-	}
-	return newCard(container.NewBorder(container.NewVBox(top, vSpace(4)), nil, nil, nil, body))
+	return uikit.TitledCard(title, subtitle, actions, body)
 }
 
 func boldText(s string, size float32) *canvas.Text {

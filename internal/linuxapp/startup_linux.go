@@ -6,20 +6,22 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"time"
 	"strings"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+
+	"goampp/internal/uikit"
 )
 
 type linuxStartupState struct {
-	Service  serviceState
-	Enabled  bool
-	Known    bool
+	Service serviceState
+	Enabled bool
+	Known   bool
 }
 
 func linuxStartupEnabled(manager, unit string) (bool, bool) {
@@ -145,7 +147,7 @@ func execLookPath(command string) (string, error) {
 }
 
 func buildLinuxStartupPage(w fyne.Window) fyne.CanvasObject {
-	rows := container.NewVBox()
+	rows := container.NewGridWrap(fyne.NewSize(300, 150))
 	status := widget.NewLabel("Scan installed services to inspect and configure automatic startup.")
 	status.Wrapping = fyne.TextWrapWord
 	refreshButton := widget.NewButtonWithIcon("Refresh", theme.ViewRefreshIcon(), nil)
@@ -174,37 +176,34 @@ func buildLinuxStartupPage(w fyne.Window) fyne.CanvasObject {
 					name.TextStyle = fyne.TextStyle{Bold: true}
 					meta := widget.NewLabel(fmt.Sprintf("%s · %s · currently %s", state.Service.Unit, state.Service.Manager, serviceRunStatus(state.Service.Running)))
 					meta.Wrapping = fyne.TextWrapBreak
-					checkLabel := "Start this service at boot"
+					checkLabel := "Start at boot"
 					if !state.Known {
-						checkLabel = "Startup state is not detectable on this init system"
+						checkLabel = "Startup state unavailable"
 					}
-					check := widget.NewCheck(checkLabel, nil)
-					check.SetChecked(state.Enabled)
-					if !state.Known { check.Disable() }
-					check.OnChanged = func(enable bool) {
-						check.Disable()
-						go func() {
-							err := setLinuxStartup(state.Service.Manager, state.Service.Unit, enable)
-							fyne.Do(func() {
-								if err != nil {
-									check.SetChecked(!enable)
-									dialog.ShowError(err, w)
-									linuxSetStatus("Startup change failed for " + state.Service.Unit)
-									linuxAddLog("Startup change failed for " + state.Service.Unit + ": " + err.Error())
-								} else {
-									check.SetChecked(enable)
-									verb := "disabled"
-									if enable { verb = "enabled" }
-									status.SetText("Automatic startup " + verb + " for " + state.Service.Unit + ".")
-									linuxSetStatus("Startup " + verb + ": " + state.Service.Unit)
-									linuxAddLog("Service startup " + verb + ": " + state.Service.Unit)
-								}
-								check.Enable()
-							})
-						}()
-					}
+					check := uikit.StartupCheck(checkLabel, state.Enabled, state.Known,
+						func(enable bool, done func(error)) {
+							go func() {
+								err := setLinuxStartup(state.Service.Manager, state.Service.Unit, enable)
+								fyne.Do(func() { done(err) })
+							}()
+						},
+						func(enable bool, err error) {
+							if err != nil {
+								dialog.ShowError(err, w)
+								linuxSetStatus("Startup change failed for " + state.Service.Unit)
+								linuxAddLog("Startup change failed for " + state.Service.Unit + ": " + err.Error())
+								return
+							}
+							verb := "disabled"
+							if enable {
+								verb = "enabled"
+							}
+							status.SetText("Automatic startup " + verb + " for " + state.Service.Unit + ".")
+							linuxSetStatus("Startup " + verb + ": " + state.Service.Unit)
+							linuxAddLog("Service startup " + verb + ": " + state.Service.Unit)
+						})
 					copy := widget.NewButtonWithIcon("Copy command", theme.ContentCopyIcon(), func() {
-						command, err := linuxStartupCommand(state.Service.Manager, state.Service.Unit, !state.Enabled)
+						command, err := linuxStartupCommand(state.Service.Manager, state.Service.Unit, !check.Checked)
 						if err != nil {
 							dialog.ShowError(err, w)
 							return
@@ -212,8 +211,9 @@ func buildLinuxStartupPage(w fyne.Window) fyne.CanvasObject {
 						w.Clipboard().SetContent("sudo " + command)
 						dialog.ShowInformation("Command copied", "Copied a command that changes the boot-start state for "+state.Service.Unit+". Review it before running it in a terminal.", w)
 					})
-					rows.Add(linuxSurface(container.NewBorder(nil, nil, container.NewVBox(name, meta, check), copy, nil), 8, 8, 10, 10))
-					rows.Add(linuxVSpace(6))
+					copy.Importance = widget.LowImportance
+					rows.Add(uikit.StartupServiceCard(linuxImage(linuxServiceResource(state.Service.Definition.Name), 24, state.Service.Definition.Name),
+						container.NewVBox(name, meta, check, copy), nil))
 				}
 				if len(states) == 0 {
 					rows.Add(container.NewCenter(widget.NewLabel("No supported service units were detected. Install a service through your distribution package manager, then refresh.")))
@@ -225,13 +225,13 @@ func buildLinuxStartupPage(w fyne.Window) fyne.CanvasObject {
 		}()
 	}
 	refreshButton.OnTapped = refresh
-	help := linuxSurface(container.NewVBox(
-		linuxBoldText("Automatic service startup", 14),
+	help := container.NewVBox(
 		linuxMutedText("Enable or disable boot startup for distribution-managed services. This does not start or stop a service immediately.", 11.5),
-		container.NewHBox(refreshButton, copyHelp),
-	), 10, 10, 12, 12)
+		container.NewHBox(refreshButton, copyHelp), status,
+	)
 	refresh()
-	return container.NewVScroll(linuxPad(container.NewVBox(help, linuxVSpace(8), status, linuxVSpace(6), rows), 0, 10, 0, 0))
+	return uikit.StartupPage("Linux", help, container.NewVScroll(rows),
+		"Service startup", "Changes affect system boot and may require administrator permission.")
 }
 
 func serviceRunStatus(running bool) string {

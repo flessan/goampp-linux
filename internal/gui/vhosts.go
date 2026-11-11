@@ -16,6 +16,7 @@ import (
 
 	"goampp/internal/config"
 	"goampp/internal/core"
+	"goampp/internal/uikit"
 )
 
 var vhostUI struct {
@@ -43,8 +44,8 @@ func buildVhostsPage() (fyne.CanvasObject, fyne.CanvasObject) {
 		},
 	)
 	vhostUI.list.OnSelected = func(id widget.ListItemID) { selectVhost(id) }
-	vhostUI.empty = container.NewCenter(mutedText("No virtual hosts yet — add one on the right.", 13))
-	left := newTitledCard("Domains", "Select a domain to edit it.", nil, container.NewStack(vhostUI.list, vhostUI.empty))
+	vhostUI.empty = uikit.EmptyVirtualHosts()
+	list := container.NewStack(vhostUI.list, vhostUI.empty)
 
 	vhostUI.name = widget.NewEntry()
 	vhostUI.name.SetPlaceHolder("myapp")
@@ -65,23 +66,18 @@ func buildVhostsPage() (fyne.CanvasObject, fyne.CanvasObject) {
 		d.Show()
 	})
 
-	form := container.New(layout.NewFormLayout(),
-		widget.NewLabel("Domain"), container.NewBorder(nil, nil, nil, minSized(vhostUI.ext, 110, 0), vhostUI.name),
-		widget.NewLabel("Document root"), container.NewBorder(nil, nil, nil, browse, vhostUI.docroot),
-		widget.NewLabel("Port"), container.NewBorder(nil, nil, minSized(vhostUI.port, 90, 0), nil),
-		widget.NewLabel("Server"), minSized(vhostUI.server, 140, 0),
+	form := uikit.VirtualHostForm(
+		container.NewBorder(nil, nil, nil, minSized(vhostUI.ext, 110, 0), vhostUI.name),
+		container.NewBorder(nil, nil, nil, browse, vhostUI.docroot), vhostUI.port, vhostUI.server,
 	)
 
 	save := importantButton("Save", theme.DocumentSaveIcon(), widget.HighImportance, saveVhostForm)
 	vhostUI.toggleBtn = lowButton("Disable", theme.VisibilityOffIcon(), toggleSelectedVhost)
 	vhostUI.delBtn = importantButton("Delete", theme.DeleteIcon(), widget.DangerImportance, deleteSelectedVhost)
 	vhostUI.formTitle = boldText("New virtual host", 15)
-	right := newCard(container.NewVBox(
-		vhostUI.formTitle,
-		mutedText("Saved changes are applied to hosts and the web server automatically.", 11.5),
-		vSpace(4), form, vSpace(6),
-		container.NewHBox(save, vhostUI.toggleBtn, layout.NewSpacer(), vhostUI.delBtn),
-	))
+	right := uikit.VirtualHostEditor(vhostUI.formTitle,
+		"Saved changes are applied to hosts and the web server automatically.", form,
+		container.NewHBox(save, vhostUI.toggleBtn, layout.NewSpacer(), vhostUI.delBtn), nil)
 
 	newBtn := importantButton("New", theme.ContentAddIcon(), widget.MediumImportance, func() {
 		vhostUI.list.UnselectAll()
@@ -90,10 +86,8 @@ func buildVhostsPage() (fyne.CanvasObject, fyne.CanvasObject) {
 	applyBtn := lowButton("Re-apply all", theme.ViewRefreshIcon(), core.ApplyVhostsAuto)
 	actions := container.NewHBox(applyBtn, newBtn)
 
-	split := container.NewHSplit(left, container.NewVBox(right))
-	split.Offset = 0.52
 	clearVhostForm()
-	return actions, split
+	return actions, uikit.VirtualHostsPage(list, container.NewVBox(right))
 }
 
 type vhostRow struct {

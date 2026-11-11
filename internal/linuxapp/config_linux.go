@@ -15,6 +15,8 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+
+	"goampp/internal/uikit"
 )
 
 // atomicWriteLinuxFile replaces a file via a temporary file in the same
@@ -146,9 +148,9 @@ func saveLinuxConfigFile(path string, data []byte) (string, error) {
 	return backupPath, nil
 }
 
-func buildLinuxConfigEditorPage(w fyne.Window) fyne.CanvasObject {
+func buildLinuxConfigEditorPage(w fyne.Window) (fyne.CanvasObject, fyne.CanvasObject) {
 	files := widget.NewSelect(nil, nil)
-	files.PlaceHolder = "Select a config file"
+	files.PlaceHolder = "Choose a file…"
 	pathLabel := widget.NewLabel("No file loaded")
 	pathLabel.Wrapping = fyne.TextWrapBreak
 	status := widget.NewLabel("System files may require administrator permissions. Saves create a backup in your user cache first.")
@@ -291,28 +293,11 @@ func buildLinuxConfigEditorPage(w fyne.Window) fyne.CanvasObject {
 		setStatus("Saved. Backup: " + backup)
 		linuxAddLog("Config editor saved " + currentPath + " (backup: " + backup + ")")
 	})
-	top := container.NewBorder(
-		nil, nil,
-		container.NewHBox(files, openButton),
-		container.NewHBox(reloadButton, saveButton, openExternalButton),
-		pathLabel,
-	)
-	body := linuxSurface(container.NewBorder(
-		container.NewVBox(top, linuxVSpace(6), status),
-		nil, nil, nil,
-		editor,
-	), 10, 10, 12, 12)
+	reloadButton.Importance = widget.LowImportance
+	saveButton.Importance = widget.HighImportance
+	openButton.Importance = widget.LowImportance
+	openExternalButton.Importance = widget.LowImportance
 	refreshOptions()
-	return container.NewBorder(
-		nil, nil, nil, nil,
-		linuxPad(container.NewVBox(
-			linuxSurface(container.NewHBox(
-				linuxBoldText("Configuration editor", 14),
-				linuxHSpace(8),
-				linuxMutedText("Read and edit local text configuration files.", 11.5),
-			), 8, 8, 10, 10),
-			linuxVSpace(8),
-			body,
-		), 0, 10, 0, 0),
-	)
+	return uikit.ConfigEditorPage(files, []fyne.CanvasObject{reloadButton, saveButton, openButton},
+		pathLabel, container.NewHBox(openExternalButton), status, editor)
 }

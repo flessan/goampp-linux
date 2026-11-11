@@ -242,3 +242,20 @@ If a download URL in `download.go` goes stale, file an issue with the service na
 ## License
 
 MIT. Service logos under `assets/icons/` and `icon/` are trademarks of their respective owners and used here purely for identification.
+
+### Optional commit metadata hook
+
+Contributors who want a single consistent `Co-authored-by` trailer can opt in
+with their own configured Git identity (this is not a requirement for other
+contributors):
+
+```sh
+git config goampp.coauthorName "$(git config user.name)"
+git config goampp.coauthorEmail "$(git config user.email)"
+git config core.hooksPath tools/hooks
+```
+
+Check for existing hooks before changing `core.hooksPath`; Git runs hooks from
+only one directory. The hook adds the configured trailer if absent and rejects
+conflicting or duplicate co-author trailers rather than silently removing them.
+Unset `core.hooksPath` to stop using this optional hook.

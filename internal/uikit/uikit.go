@@ -66,6 +66,46 @@ func MutedText(value string, size float32) *canvas.Text {
 	return text
 }
 
+// TitledCard is the Windows card heading, spacing and surface treatment.
+func TitledCard(title, subtitle string, actions, body fyne.CanvasObject) fyne.CanvasObject {
+	head := container.NewVBox(BoldText(title, 13))
+	if subtitle != "" {
+		head.Add(MutedText(subtitle, 11.5))
+	}
+	var top fyne.CanvasObject = head
+	if actions != nil {
+		top = container.NewBorder(nil, nil, nil, container.NewCenter(actions), head)
+	}
+	if body == nil {
+		return Surface(top, 10, 10, 12, 12)
+	}
+	return Surface(container.NewBorder(container.NewVBox(top, Gap(1, 4)), nil, nil, nil, body), 10, 10, 12, 12)
+}
+
+// VirtualHostsPage uses the Windows list-and-editor split. The supplied editor
+// owns its platform-specific form, actions and persistence behavior.
+func VirtualHostsPage(list, editor fyne.CanvasObject) fyne.CanvasObject {
+	left := TitledCard("Domains", "Select a domain to edit it.", nil, list)
+	split := container.NewHSplit(left, editor)
+	split.Offset = 0.52
+	return split
+}
+
+// ConfigEditorPage provides the Windows editor hierarchy. Platform adapters own
+// file discovery, loading, saving and any extra controls or explanatory status.
+// The returned actions belong in the application page header.
+func ConfigEditorPage(files fyne.CanvasObject, actions []fyne.CanvasObject, path, pathActions, notice, editor fyne.CanvasObject) (fyne.CanvasObject, fyne.CanvasObject) {
+	header := []fyne.CanvasObject{MinSize(files, 240, 0)}
+	header = append(header, actions...)
+	top := container.NewBorder(nil, nil, nil, pathActions, path)
+	heading := []fyne.CanvasObject{top, Gap(1, 4)}
+	if notice != nil {
+		heading = append(heading, notice)
+	}
+	body := Surface(container.NewBorder(container.NewVBox(heading...), nil, nil, nil, editor), 10, 10, 12, 12)
+	return container.NewHBox(header...), body
+}
+
 // Avatar is the Windows service/logo treatment, including its fallback mark.
 func Avatar(resource fyne.Resource, name string, size float32) fyne.CanvasObject {
 	if resource != nil {

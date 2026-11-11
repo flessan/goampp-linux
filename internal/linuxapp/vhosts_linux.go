@@ -16,6 +16,8 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+
+	"goampp/internal/uikit"
 )
 
 type linuxVHost struct {
@@ -113,7 +115,7 @@ func linuxHostConfig(host linuxVHost) string {
 	return strings.Join(snippets, "\n\n")
 }
 
-func buildLinuxVHostsPage(w fyne.Window, projectDir string) fyne.CanvasObject {
+func buildLinuxVHostsPage(w fyne.Window, projectDir string) (fyne.CanvasObject, fyne.CanvasObject) {
 	hosts, loadErr := loadLinuxVHosts()
 	var selected = -1
 	list := widget.NewList(
@@ -139,6 +141,16 @@ func buildLinuxVHostsPage(w fyne.Window, projectDir string) fyne.CanvasObject {
 			row.Objects[1].(*widget.Label).Wrapping = fyne.TextWrapBreak
 		},
 	)
+	empty := uikit.EmptyVirtualHosts()
+	updateEmpty := func() {
+		if len(hosts) == 0 && loadErr == nil {
+			empty.Show()
+		} else {
+			empty.Hide()
+		}
+	}
+	updateEmpty()
+	formTitle := uikit.BoldText("New virtual host", 15)
 	domain := widget.NewEntry()
 	domain.SetPlaceHolder("myapp.test")
 	docroot := widget.NewEntry()
@@ -153,6 +165,8 @@ func buildLinuxVHostsPage(w fyne.Window, projectDir string) fyne.CanvasObject {
 
 	clear := func() {
 		selected = -1
+		formTitle.Text = "New virtual host"
+		formTitle.Refresh()
 		domain.SetText("")
 		docroot.SetText(projectDir)
 		port.SetText("80")
@@ -165,6 +179,8 @@ func buildLinuxVHostsPage(w fyne.Window, projectDir string) fyne.CanvasObject {
 			return
 		}
 		selected = index
+		formTitle.Text = "Edit virtual host"
+		formTitle.Refresh()
 		host := hosts[index]
 		domain.SetText(host.Domain)
 		docroot.SetText(host.DocumentRoot)
@@ -235,6 +251,7 @@ func buildLinuxVHostsPage(w fyne.Window, projectDir string) fyne.CanvasObject {
 			dialog.ShowError(err, w)
 			return
 		}
+		updateEmpty()
 		list.Refresh()
 		list.Select(selected)
 		status.SetText("Saved " + name + " to " + linuxVHostsPath() + ". Copy its server snippet below and enable the matching web-server config yourself.")
@@ -281,10 +298,11 @@ func buildLinuxVHostsPage(w fyne.Window, projectDir string) fyne.CanvasObject {
 			}
 			linuxAddLog("Virtual host deleted: " + name)
 			clear()
+			updateEmpty()
 			list.Refresh()
 		}, w)
 	})
-	browse := widget.NewButtonWithIcon("Browse", theme.FolderOpenIcon(), func() {
+	browse := widget.NewButtonWithIcon("", theme.FolderOpenIcon(), func() {
 		d := dialog.NewFolderOpen(func(uri fyne.ListableURI, err error) {
 			if err == nil && uri != nil {
 				docroot.SetText(uri.Path())
@@ -301,7 +319,11 @@ func buildLinuxVHostsPage(w fyne.Window, projectDir string) fyne.CanvasObject {
 			root, _ := filepath.Abs(strings.TrimSpace(docroot.Text))
 			p, _ := strconv.Atoi(port.Text)
 			serverValue := "apache"
-			if server.Selected == "Nginx" { serverValue = "nginx" } else if server.Selected == "Apache + Nginx" { serverValue = "both" }
+			if server.Selected == "Nginx" {
+				serverValue = "nginx"
+			} else if server.Selected == "Apache + Nginx" {
+				serverValue = "both"
+			}
 			host = linuxVHost{Domain: name, DocumentRoot: root, Port: p, Server: serverValue, Enabled: enabled}
 		}
 		if !validLinuxHostDomain(host.Domain) || !validLinuxDocumentRootPath(host.DocumentRoot) {
@@ -321,28 +343,12 @@ func buildLinuxVHostsPage(w fyne.Window, projectDir string) fyne.CanvasObject {
 		w.Clipboard().SetContent("127.0.0.1 " + name)
 		dialog.ShowInformation("Copied", "Add the copied mapping to /etc/hosts only if your local hostname needs it. This action does not modify the hosts file.", w)
 	})
-	form := container.New(layout.NewFormLayout(),
-		widget.NewLabel("Domain"), domain,
-		widget.NewLabel("Document root"), container.NewBorder(nil, nil, nil, browse, docroot),
-		widget.NewLabel("Port"), port,
-		widget.NewLabel("Web server"), server,
-	)
-	formCard := linuxSurface(container.NewVBox(
-		linuxBoldText("Virtual host", 14),
-		linuxMutedText("Manage host definitions and generate Apache/Nginx snippets.", 11.5),
-		linuxVSpace(8),
-		form,
-		linuxVSpace(8),
-		container.NewHBox(save, newHost, toggle, remove),
-		linuxVSpace(4),
-		container.NewHBox(copySnippet, copyHosts),
-		linuxVSpace(6),
-		status,
-	), 10, 10, 12, 12)
-	listCard := linuxSurface(container.NewBorder(
-		linuxPad(linuxBoldText("Saved hosts", 14), 0, 8, 0, 0),
-		nil, nil, nil, list,
-	), 8, 8, 10, 10)
+	browse.Importance = widget.LowImportance
+	form := uikit.VirtualHostForm(domain, container.NewBorder(nil, nil, nil, browse, docroot), port, server)
+	formCard := uikit.VirtualHostEditor(formTitle,
+		"Manage host definitions and generate Apache/Nginx snippets.", form,
+		container.NewHBox(save, toggle, layout.NewSpacer(), remove),
+		container.NewVBox(linuxVSpace(4), container.NewHBox(copySnippet, copyHosts), linuxVSpace(6), status))
 	if loadErr != nil {
 		status.SetText("Could not load saved hosts: " + loadErr.Error())
 	}
@@ -352,9 +358,9 @@ func buildLinuxVHostsPage(w fyne.Window, projectDir string) fyne.CanvasObject {
 	} else {
 		docroot.SetText(projectDir)
 	}
-	return container.NewVScroll(linuxPad(container.NewVBox(
-		formCard,
-		linuxVSpace(8),
-		listCard,
-	), 0, 10, 0, 0))
+	save.Importance = widget.HighImportance
+	newHost.Importance = widget.MediumImportance
+	toggle.Importance = widget.LowImportance
+	remove.Importance = widget.DangerImportance
+	return container.NewHBox(newHost), uikit.VirtualHostsPage(container.NewStack(list, empty), container.NewVScroll(container.NewVBox(formCard)))
 }

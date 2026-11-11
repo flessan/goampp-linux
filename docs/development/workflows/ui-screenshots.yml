@@ -1,0 +1,69 @@
+name: UI screenshot review (template)
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  capture:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: windows-latest
+            platform: windows
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Ensure Windows compiler is available
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/ci/install-windows-deps.ps1
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: scripts/ci/install-linux-deps.sh
+      - name: Capture Linux pages
+        if: runner.os == 'Linux'
+        run: scripts/visual-tests/capture-linux.sh
+      - name: Capture Windows pages
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/visual-tests/capture-windows.ps1
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ui-${{ matrix.platform }}
+          path: snapshots/${{ matrix.platform }}/*.png
+          if-no-files-found: error
+          retention-days: 7
+  compare:
+    needs: capture
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install image comparison dependency
+        run: python -m pip install 'Pillow>=11,<13'
+      - uses: actions/download-artifact@v8
+        with:
+          name: ui-windows
+          path: snapshots/windows
+      - uses: actions/download-artifact@v8
+        with:
+          name: ui-linux
+          path: snapshots/linux
+      - name: Create comparisons
+        run: python scripts/visual-tests/compare.py snapshots/windows snapshots/linux snapshots/comparison
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ui-comparison
+          path: snapshots/comparison/*.png
+          if-no-files-found: error
+          retention-days: 7
