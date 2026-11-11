@@ -180,41 +180,28 @@ func buildLinuxStartupPage(w fyne.Window) fyne.CanvasObject {
 					if !state.Known {
 						checkLabel = "Startup state unavailable"
 					}
-					check := widget.NewCheck(checkLabel, nil)
-					check.SetChecked(state.Enabled)
-					if !state.Known {
-						check.Disable()
-					}
-					updating := false
-					check.OnChanged = func(enable bool) {
-						if updating {
-							return
-						}
-						check.Disable()
-						go func() {
-							err := setLinuxStartup(state.Service.Manager, state.Service.Unit, enable)
-							fyne.Do(func() {
-								if err != nil {
-									updating = true
-									check.SetChecked(!enable)
-									updating = false
-									dialog.ShowError(err, w)
-									linuxSetStatus("Startup change failed for " + state.Service.Unit)
-									linuxAddLog("Startup change failed for " + state.Service.Unit + ": " + err.Error())
-								} else {
-									check.SetChecked(enable)
-									verb := "disabled"
-									if enable {
-										verb = "enabled"
-									}
-									status.SetText("Automatic startup " + verb + " for " + state.Service.Unit + ".")
-									linuxSetStatus("Startup " + verb + ": " + state.Service.Unit)
-									linuxAddLog("Service startup " + verb + ": " + state.Service.Unit)
-								}
-								check.Enable()
-							})
-						}()
-					}
+					check := uikit.StartupCheck(checkLabel, state.Enabled, state.Known,
+						func(enable bool, done func(error)) {
+							go func() {
+								err := setLinuxStartup(state.Service.Manager, state.Service.Unit, enable)
+								fyne.Do(func() { done(err) })
+							}()
+						},
+						func(enable bool, err error) {
+							if err != nil {
+								dialog.ShowError(err, w)
+								linuxSetStatus("Startup change failed for " + state.Service.Unit)
+								linuxAddLog("Startup change failed for " + state.Service.Unit + ": " + err.Error())
+								return
+							}
+							verb := "disabled"
+							if enable {
+								verb = "enabled"
+							}
+							status.SetText("Automatic startup " + verb + " for " + state.Service.Unit + ".")
+							linuxSetStatus("Startup " + verb + ": " + state.Service.Unit)
+							linuxAddLog("Service startup " + verb + ": " + state.Service.Unit)
+						})
 					copy := widget.NewButtonWithIcon("Copy command", theme.ContentCopyIcon(), func() {
 						command, err := linuxStartupCommand(state.Service.Manager, state.Service.Unit, !check.Checked)
 						if err != nil {

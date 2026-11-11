@@ -48,19 +48,19 @@ func refreshStartupPage() {
 		if ms.Conf.Port > 0 {
 			label += fmt.Sprintf("  :%d", ms.Conf.Port)
 		}
-		check := widget.NewCheck(label, nil)
-		check.SetChecked(core.AutoStartContains(name))
-		check.OnChanged = func(v bool) {
-			if err := core.SetServiceAutoStart(name, v); err != nil {
-				core.App.AppendLog("startup services: " + err.Error())
-				return
-			}
-			state := "skip"
-			if v {
-				state = "start"
-			}
-			core.App.AppendLog(fmt.Sprintf("startup services: %s → %s", name, state))
-		}
+		check := uikit.StartupCheck(label, core.AutoStartContains(name), true,
+			func(v bool, done func(error)) { done(core.SetServiceAutoStart(name, v)) },
+			func(v bool, err error) {
+				if err != nil {
+					core.App.AppendLog("startup services: " + err.Error())
+					return
+				}
+				state := "skip"
+				if v {
+					state = "start"
+				}
+				core.App.AppendLog(fmt.Sprintf("startup services: %s → %s", name, state))
+			})
 		startupUI.list.Add(uikit.StartupServiceCard(serviceAvatar(name, 24), check, nil))
 	}
 	if len(startupUI.list.Objects) == 0 {

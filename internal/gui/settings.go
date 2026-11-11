@@ -22,19 +22,10 @@ import (
 )
 
 func buildSettingsPage() (fyne.CanvasObject, fyne.CanvasObject) {
-	// Appearance
-	themes := []string{themeSystem, themeLight, themeDark}
-	themeSeg := newSegmented(themes, func(i int) {
-		core.App.Fyne.Preferences().SetString(themePrefKey, themes[i])
-		core.App.Fyne.Settings().SetTheme(newGoamppTheme(themes[i]))
-	})
-	current := core.App.Fyne.Preferences().StringWithFallback(themePrefKey, themeSystem)
-	for i, t := range themes {
-		if t == current {
-			themeSeg.setSelected(i, false)
-		}
-	}
-	appearance := uikit.SettingsRow("Theme", "System follows the Windows light/dark setting.", themeSeg.obj)
+	appearance := uikit.AppearanceControl(core.App.Fyne, themePrefKey,
+		"System follows the Windows light/dark setting.", func(value string) {
+			core.App.Fyne.Settings().SetTheme(newGoamppTheme(value))
+		})
 
 	// Paths
 	paths := container.NewVBox()

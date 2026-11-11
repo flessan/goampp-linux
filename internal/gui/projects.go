@@ -61,42 +61,47 @@ func buildProjectsPage() (fyne.CanvasObject, fyne.CanvasObject) {
 	updatePreview()
 
 	create := importantButton("Create project", theme.ContentAddIcon(), widget.HighImportance, nil)
+	creator := &uikit.ProjectCreator{
+		Prepare: func(request uikit.ProjectRequest) (uikit.ProjectRequest, error) {
+			if projects.FrameworkByName(request.Framework) == nil {
+				return request, fmt.Errorf("Pick a framework first.")
+			}
+			request.Name = core.Slugify(request.Name)
+			request.Domain = strings.TrimSpace(request.Domain)
+			if request.Domain == "" {
+				request.Domain = request.Name
+			}
+			request.Domain += ext.Selected
+			return request, nil
+		},
+		Create: func(request uikit.ProjectRequest) (string, error) {
+			err := projects.CreateProject(core.App.Cfg, projects.FrameworkByName(request.Framework), request.Name, request.Domain, core.App.AppendLog)
+			return "", err
+		},
+		Dispatch: core.UiDo,
+		Invalid:  func(err error) { dialog.ShowInformation("Projects", err.Error(), core.App.Win) },
+		Started: func(request uikit.ProjectRequest) {
+			core.App.AppendLog(fmt.Sprintf("projects: creating '%s' (%s) at %s ...", request.Name, request.Framework, request.Domain))
+			core.SetStatus(fmt.Sprintf("Creating %s...", request.Name))
+			create.Disable()
+		},
+		Finished: func(request uikit.ProjectRequest, _ string, err error) {
+			create.Enable()
+			if err != nil {
+				core.App.AppendLog("projects: " + err.Error())
+				dialog.ShowError(err, core.App.Win)
+				return
+			}
+			core.SetStatus(fmt.Sprintf("Created %s — http://%s", request.Name, request.Domain))
+			go core.RestartWebServerIfRunning()
+			name.SetText("")
+			domain.SetText("")
+			refreshProjectList()
+			refreshVhostList()
+		},
+	}
 	create.OnTapped = func() {
-		f := projects.FrameworkByName(framework.Selected)
-		if f == nil {
-			dialog.ShowInformation("Projects", "Pick a framework first.", core.App.Win)
-			return
-		}
-		slug := core.Slugify(name.Text)
-		if slug == "" {
-			dialog.ShowInformation("Projects", "A project name is required.", core.App.Win)
-			return
-		}
-		d := strings.TrimSpace(domain.Text)
-		if d == "" {
-			d = slug
-		}
-		full := d + ext.Selected
-		core.App.AppendLog(fmt.Sprintf("projects: creating '%s' (%s) at %s ...", slug, f.Name, full))
-		core.SetStatus(fmt.Sprintf("Creating %s...", slug))
-		create.Disable()
-		go func() {
-			err := projects.CreateProject(core.App.Cfg, f, slug, full, core.App.AppendLog)
-			core.UiDo(func() {
-				create.Enable()
-				if err != nil {
-					core.App.AppendLog("projects: " + err.Error())
-					dialog.ShowError(err, core.App.Win)
-					return
-				}
-				core.SetStatus(fmt.Sprintf("Created %s — http://%s", slug, full))
-				go core.RestartWebServerIfRunning()
-				name.SetText("")
-				domain.SetText("")
-				refreshProjectList()
-				refreshVhostList()
-			})
-		}()
+		creator.Submit(uikit.ProjectRequest{Name: name.Text, Framework: framework.Selected, Domain: domain.Text})
 	}
 
 	form := uikit.ProjectForm(framework, name, container.NewBorder(nil, nil, nil, minSized(ext, 110, 0), domain))

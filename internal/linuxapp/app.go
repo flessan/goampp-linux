@@ -333,54 +333,58 @@ func Run() {
 		}
 		projectList.Refresh()
 	}
-	var createButton *widget.Button
-	createButton = widget.NewButtonWithIcon("Create project", theme.ContentAddIcon(), func() {
-		name := strings.TrimSpace(projectNameEntry.Text)
-		templateName := templateSelect.Selected
-		if !projectNamePattern.MatchString(name) {
-			dialog.ShowInformation("Projects", "Use 1–48 letters, numbers, underscores, or hyphens. The first character must be a letter or number.", w)
-			return
-		}
-		if templateName == "" {
-			dialog.ShowInformation("Projects", "Choose a project template first.", w)
-			return
-		}
-		createButton.Disable()
-		projectNameEntry.Disable()
-		templateSelect.Disable()
-		projectStatus.SetText("Creating " + templateName + " in the background… Output is added to the activity log.")
-		linuxSetStatus("Creating project: " + name)
-		linuxAddLog("Creating project " + name + " using " + templateName)
-		go func() {
-			created, err := createProjectWithLog(projectDir, name, templateName, func(line string) {
-				linuxAddLog("[" + name + "] " + line)
+	createButton := widget.NewButtonWithIcon("Create project", theme.ContentAddIcon(), nil)
+	creator := &uikit.ProjectCreator{
+		Prepare: func(request uikit.ProjectRequest) (uikit.ProjectRequest, error) {
+			request.Name = strings.TrimSpace(request.Name)
+			if !projectNamePattern.MatchString(request.Name) {
+				return request, fmt.Errorf("Use 1–48 letters, numbers, underscores, or hyphens. The first character must be a letter or number.")
+			}
+			return request, nil
+		},
+		Create: func(request uikit.ProjectRequest) (string, error) {
+			return createProjectWithLog(projectDir, request.Name, request.Framework, func(line string) {
+				linuxAddLog("[" + request.Name + "] " + line)
 			})
-			fyne.Do(func() {
-				createButton.Enable()
-				projectNameEntry.Enable()
-				templateSelect.Enable()
-				if err != nil {
-					if created != "" {
-						projectStatus.SetText("Project creation failed. Partial files were kept at " + created + ". Inspect Logs before retrying.")
-						linuxAddLog("Project creation failed for " + name + ": " + err.Error())
-						refreshProjects()
-					} else {
-						projectStatus.SetText("Could not create " + name + ": " + err.Error())
-						linuxAddLog("Project creation failed for " + name + ": " + err.Error())
-					}
-					linuxSetStatus("Project creation failed: " + name)
-					dialog.ShowError(err, w)
-					return
+		},
+		Dispatch: fyne.Do,
+		Invalid:  func(err error) { dialog.ShowInformation("Projects", err.Error(), w) },
+		Started: func(request uikit.ProjectRequest) {
+			createButton.Disable()
+			projectNameEntry.Disable()
+			templateSelect.Disable()
+			projectStatus.SetText("Creating " + request.Framework + " in the background… Output is added to the activity log.")
+			linuxSetStatus("Creating project: " + request.Name)
+			linuxAddLog("Creating project " + request.Name + " using " + request.Framework)
+		},
+		Finished: func(request uikit.ProjectRequest, created string, err error) {
+			createButton.Enable()
+			projectNameEntry.Enable()
+			templateSelect.Enable()
+			if err != nil {
+				if created != "" {
+					projectStatus.SetText("Project creation failed. Partial files were kept at " + created + ". Inspect Logs before retrying.")
+					linuxAddLog("Project creation failed for " + request.Name + ": " + err.Error())
+					refreshProjects()
+				} else {
+					projectStatus.SetText("Could not create " + request.Name + ": " + err.Error())
+					linuxAddLog("Project creation failed for " + request.Name + ": " + err.Error())
 				}
-				projectStatus.SetText("Created " + created + ". See README.md or Logs for next steps.")
-				linuxAddLog("Created project " + filepath.Base(created) + " using " + templateName)
-				linuxSetStatus("Project created: " + filepath.Base(created))
-				projectNameEntry.SetText("")
-				refreshProjects()
-				dialog.ShowInformation("Project created", "Your project files are ready. GoAMPP keeps framework creation output in the project's Logs file.", w)
-			})
-		}()
-	})
+				linuxSetStatus("Project creation failed: " + request.Name)
+				dialog.ShowError(err, w)
+				return
+			}
+			projectStatus.SetText("Created " + created + ". See README.md or Logs for next steps.")
+			linuxAddLog("Created project " + filepath.Base(created) + " using " + request.Framework)
+			linuxSetStatus("Project created: " + filepath.Base(created))
+			projectNameEntry.SetText("")
+			refreshProjects()
+			dialog.ShowInformation("Project created", "Your project files are ready. GoAMPP keeps framework creation output in the project's Logs file.", w)
+		},
+	}
+	createButton.OnTapped = func() {
+		creator.Submit(uikit.ProjectRequest{Name: projectNameEntry.Text, Framework: templateSelect.Selected})
+	}
 	projectActions := container.NewHBox(
 		widget.NewButtonWithIcon("Open folder", theme.FolderOpenIcon(), func() {
 			if err := openExternal(projectDir); err != nil {
@@ -433,22 +437,12 @@ func Run() {
 		"Create a safe starter in your local GoAMPP workspace.")
 	refreshProjects()
 
-	themes := []string{"System", "Light", "Dark"}
-	themeControl := newLinuxSegmented(themes, func(index int) {
-		preference := themes[index]
-		a.Preferences().SetString("theme", preference)
+	appearanceRow := uikit.AppearanceControl(a, "theme", "System follows your Linux desktop appearance.", func(preference string) {
 		a.Settings().SetTheme(newLinuxGoamppTheme(preference))
 		refreshLinuxThemeSurfaces()
 		linuxSetStatus("Theme set to " + preference)
 		linuxAddLog("Appearance theme changed to " + preference)
 	})
-	for i, preference := range themes {
-		if preference == themePreference {
-			themeControl.setSelected(i, false)
-			break
-		}
-	}
-	appearanceRow := uikit.SettingsRow("Theme", "System follows your Linux desktop appearance.", themeControl.obj)
 
 	var trayPreference fyne.CanvasObject
 	if trayAvailable {
