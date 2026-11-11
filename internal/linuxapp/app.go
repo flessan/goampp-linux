@@ -324,7 +324,9 @@ func Run() {
 				})
 				actions = append(actions, logButton, openButton)
 				nameLabel := linuxBoldText(projectName, 14)
-				pathLabel := linuxMutedText(filepath.Join(projectDir, projectName), 12)
+				pathLabel := widget.NewLabel(filepath.Join(projectDir, projectName))
+				pathLabel.Truncation = fyne.TextTruncateEllipsis
+				pathLabel.Importance = widget.LowImportance
 				projectList.Add(uikit.ProjectRow(nameLabel, pathLabel, container.NewHBox(actions...)))
 				projectList.Add(uikit.Divider())
 			}
