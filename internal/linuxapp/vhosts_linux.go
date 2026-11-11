@@ -303,7 +303,11 @@ func buildLinuxVHostsPage(w fyne.Window, projectDir string) (fyne.CanvasObject, 
 			root, _ := filepath.Abs(strings.TrimSpace(docroot.Text))
 			p, _ := strconv.Atoi(port.Text)
 			serverValue := "apache"
-			if server.Selected == "Nginx" { serverValue = "nginx" } else if server.Selected == "Apache + Nginx" { serverValue = "both" }
+			if server.Selected == "Nginx" {
+				serverValue = "nginx"
+			} else if server.Selected == "Apache + Nginx" {
+				serverValue = "both"
+			}
 			host = linuxVHost{Domain: name, DocumentRoot: root, Port: p, Server: serverValue, Enabled: enabled}
 		}
 		if !validLinuxHostDomain(host.Domain) || !validLinuxDocumentRootPath(host.DocumentRoot) {
