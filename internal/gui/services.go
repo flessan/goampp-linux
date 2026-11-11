@@ -18,6 +18,7 @@ import (
 	"goampp/internal/config"
 	"goampp/internal/core"
 	"goampp/internal/packages"
+	"goampp/internal/uikit"
 )
 
 // svcCard is one service row on the Services page.
@@ -143,7 +144,7 @@ func buildServicesPage() (fyne.CanvasObject, fyne.CanvasObject) {
 		rows := container.NewVBox()
 		sec := &svcSection{group: o.group, rows: rows}
 		sec.obj = container.NewVBox(
-			container.New(layout.NewCustomPaddedLayout(8, 2, 2, 0), mutedText(o.title, 10.5)),
+			uikit.SectionLabel(o.title),
 			newListCard(rows),
 		)
 		svcUI.sections = append(svcUI.sections, sec)
@@ -158,11 +159,7 @@ func buildServicesPage() (fyne.CanvasObject, fyne.CanvasObject) {
 
 // newListCard is a bordered surface with no inner padding, for row lists.
 func newListCard(content fyne.CanvasObject) fyne.CanvasObject {
-	bg := canvas.NewRectangle(themeColor(colorCard))
-	bg.CornerRadius = theme.Size(theme.SizeNameCardRadius)
-	bg.StrokeColor = themeColor(colorCardBorder)
-	bg.StrokeWidth = 1
-	return container.NewStack(bg, container.New(layout.NewCustomPaddedLayout(2, 2, 0, 0), content))
+	return uikit.Surface(content, 2, 2, 0, 0)
 }
 
 func newServiceCard(ms *core.ManagedService) *svcCard {
@@ -435,9 +432,7 @@ func applyServiceFilter() {
 }
 
 func rowDivider() fyne.CanvasObject {
-	line := canvas.NewRectangle(themeColor(theme.ColorNameSeparator))
-	line.SetMinSize(fyne.NewSize(1, 1))
-	return container.New(layout.NewCustomPaddedLayout(0, 0, 10, 10), line)
+	return uikit.Pad(uikit.Divider(), 0, 0, 10, 10)
 }
 
 // refreshServiceList re-renders every row from live state. It must run on

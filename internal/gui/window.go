@@ -22,6 +22,7 @@ import (
 
 	"goampp/internal/core"
 	"goampp/internal/packages"
+	"goampp/internal/uikit"
 )
 
 const appID = "id.imtaqin.goampp"
@@ -85,7 +86,12 @@ func guiStatus(text string) {
 
 func Run(startHidden bool, onReady func()) {
 	a := fyneapp.NewWithID(appID)
-	a.Settings().SetTheme(newGoamppTheme(a.Preferences().StringWithFallback(themePrefKey, themeSystem)))
+	themePreference := a.Preferences().StringWithFallback(themePrefKey, themeSystem)
+	if themePreference != themeSystem && themePreference != themeDark {
+		themePreference = themeSystem
+		a.Preferences().SetString(themePrefKey, themePreference)
+	}
+	a.Settings().SetTheme(newGoamppTheme(themePreference))
 	if logo := logoResource(); logo != nil {
 		a.SetIcon(logo)
 	}
@@ -222,16 +228,9 @@ func rebuildContent() {
 		gui.pageHost.Add(p.body)
 	}
 
-	header := container.NewBorder(nil, nil, container.NewCenter(gui.headerTitle), gui.headerActions)
-	main := container.NewBorder(
-		container.New(layout.NewCustomPaddedLayout(12, 8, 18, 18), header),
-		buildBottomBar(),
-		nil, nil,
-		container.New(layout.NewCustomPaddedLayout(0, 10, 18, 18), gui.pageHost),
-	)
-
-	bg := canvas.NewRectangle(themeColor(theme.ColorNameBackground))
-	core.App.Win.SetContent(container.NewBorder(nil, nil, buildSidebar(), nil, container.NewStack(bg, main)))
+	core.App.Win.SetContent(uikit.PageFrame(
+		buildSidebar(), gui.headerTitle, gui.headerActions, buildBottomBar(), gui.pageHost,
+	))
 
 	gui.current = ""
 	showPage(current)
@@ -245,11 +244,11 @@ func showPage(key string) {
 	for _, p := range gui.pages {
 		if p.key != key {
 			p.body.Hide()
-			p.nav.setSelected(false)
+			p.nav.SetSelected(false)
 			continue
 		}
 		p.body.Show()
-		p.nav.setSelected(true)
+		p.nav.SetSelected(true)
 		gui.headerTitle.Text = p.title
 		gui.headerTitle.Refresh()
 		gui.headerActions.Objects = nil
@@ -290,16 +289,16 @@ func buildSidebar() fyne.CanvasObject {
 	stop := lowButton("Stop all", theme.NewErrorThemedResource(theme.MediaStopIcon()), func() { go core.StopAllServices() })
 	stop.Alignment = widget.ButtonAlignLeading
 
-	body := container.NewBorder(
-		container.NewVBox(container.New(layout.NewCustomPaddedLayout(0, 0, 6, 0), brand), vSpace(14), nav),
-		container.NewVBox(stat, start, stop, vSpace(4),
-			container.New(layout.NewCustomPaddedLayout(0, 0, 8, 0), mutedText(core.Version, 10.5))),
-		nil, nil,
+	top := container.NewVBox(
+		container.New(layout.NewCustomPaddedLayout(0, 0, 6, 0), brand),
+		vSpace(14),
+		nav,
 	)
-	bg := canvas.NewRectangle(themeColor(colorSidebar))
-	edge := canvas.NewRectangle(themeColor(theme.ColorNameSeparator))
-	return container.NewBorder(nil, nil, nil, container.NewGridWrap(fyne.NewSize(1, 1), edge),
-		container.NewStack(bg, minSized(container.New(layout.NewCustomPaddedLayout(14, 10, 10, 10), body), 184, 0)))
+	bottom := container.NewVBox(
+		stat, start, stop, vSpace(4),
+		container.New(layout.NewCustomPaddedLayout(0, 0, 8, 0), mutedText(core.Version, 10.5)),
+	)
+	return uikit.Sidebar(top, bottom)
 }
 
 func refreshStackSummary() {

@@ -15,11 +15,11 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
 	"goampp/assets"
+	"goampp/internal/uikit"
 )
 
 var (
@@ -105,14 +105,22 @@ var linuxServiceAssets = map[string]string{
 }
 
 var linuxToolAssets = map[string]string{
-	"PHP":      "logos/PHP.png",
-	"Composer": "logos/Composer.png",
-	"Node.js":  "logos/Node.js.png",
-	"npm":      "logos/Node.js.png",
-	"Python":   "logos/Python.png",
-	"Go":       "logos/Go.png",
-	"Java":     "logos/Java.png",
-	"Rust":     "logos/Rust.png",
+	"PHP":                 "logos/PHP.png",
+	"Composer":            "logos/Composer.png",
+	"Node.js":             "logos/Node.js.png",
+	"npm":                 "logos/Node.js.png",
+	"Python":              "logos/Python.png",
+	"Go":                  "logos/Go.png",
+	"Java":                "logos/Java.png",
+	"Rust":                "logos/Rust.png",
+	"Cargo":               "logos/Rust.png",
+	"Ruby":                "logos/Ruby.png",
+	"Bundler":             "logos/Ruby.png",
+	"Elixir":              "logos/Elixir.png",
+	"Erlang":              "logos/erlang.png",
+	"Maven":               "logos/Java.png",
+	"Gradle":              "logos/Java.png",
+	"PostgreSQL client":   "logos/PostgresSQL.png",
 }
 
 // linuxAsset loads an image from the repository's embedded asset filesystem.
@@ -223,27 +231,19 @@ func linuxLetterMark(name string, size float32) fyne.CanvasObject {
 }
 
 func linuxPad(obj fyne.CanvasObject, top, bottom, left, right float32) fyne.CanvasObject {
-	return container.New(layout.NewCustomPaddedLayout(top, bottom, left, right), obj)
+	return uikit.Pad(obj, top, bottom, left, right)
 }
 
 func linuxSurface(content fyne.CanvasObject, top, bottom, left, right float32) fyne.CanvasObject {
-	bg := canvas.NewRectangle(theme.Color(theme.ColorNameInputBackground))
-	bg.CornerRadius = 12
-	bg.StrokeColor = theme.Color(theme.ColorNameSeparator)
-	bg.StrokeWidth = 1
-	return container.NewStack(bg, linuxPad(content, top, bottom, left, right))
+	return uikit.Surface(content, top, bottom, left, right)
 }
 
 func linuxGap(height float32) fyne.CanvasObject {
-	gap := canvas.NewRectangle(color.Transparent)
-	gap.SetMinSize(fyne.NewSize(1, height))
-	return gap
+	return uikit.Gap(1, height)
 }
 
 func linuxHGap(width float32) fyne.CanvasObject {
-	gap := canvas.NewRectangle(color.Transparent)
-	gap.SetMinSize(fyne.NewSize(width, 1))
-	return gap
+	return uikit.Gap(width, 1)
 }
 
 func linuxStatusBadge(label string, value color.Color) fyne.CanvasObject {
@@ -265,46 +265,15 @@ func linuxPageIntro(title, subtitle string, icon fyne.Resource) fyne.CanvasObjec
 
 
 type linuxSegmented struct {
-	buttons  []*widget.Button
-	selected int
-	onChange func(int)
-	obj      fyne.CanvasObject
+	shared *uikit.Segmented
+	obj    fyne.CanvasObject
 }
 
 func newLinuxSegmented(options []string, onChange func(int)) *linuxSegmented {
-	s := &linuxSegmented{onChange: onChange}
-	row := container.NewHBox()
-	for i, option := range options {
-		index := i
-		button := widget.NewButton(option, func() { s.setSelected(index, true) })
-		s.buttons = append(s.buttons, button)
-		row.Add(button)
-	}
-	bg := canvas.NewRectangle(theme.Color(theme.ColorNameInputBackground))
-	bg.CornerRadius = 6
-	bg.StrokeColor = theme.Color(theme.ColorNameSeparator)
-	bg.StrokeWidth = 1
-	s.obj = container.NewStack(bg, container.New(layout.NewCustomPaddedLayout(2, 2, 2, 2), row))
-	if len(options) > 0 {
-		s.setSelected(0, false)
-	}
-	return s
+	control := uikit.NewSegmented(options, onChange)
+	return &linuxSegmented{shared: control, obj: control.Object()}
 }
 
 func (s *linuxSegmented) setSelected(index int, notify bool) {
-	if index < 0 || index >= len(s.buttons) {
-		return
-	}
-	s.selected = index
-	for i, button := range s.buttons {
-		if i == index {
-			button.Importance = widget.MediumImportance
-		} else {
-			button.Importance = widget.LowImportance
-		}
-		button.Refresh()
-	}
-	if notify && s.onChange != nil {
-		s.onChange(index)
-	}
+	s.shared.SetSelected(index, notify)
 }

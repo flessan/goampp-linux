@@ -12,10 +12,11 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+
+	"goampp/internal/uikit"
 )
 
 type linuxPage struct {
@@ -53,28 +54,19 @@ type linuxShellState struct {
 var linuxShell linuxShellState
 
 func linuxBoldText(value string, size float32) *canvas.Text {
-	t := canvas.NewText(value, theme.Color(theme.ColorNameForeground))
-	t.TextStyle = fyne.TextStyle{Bold: true}
-	t.TextSize = size
-	return t
+	return uikit.BoldText(value, size)
 }
 
 func linuxMutedText(value string, size float32) *canvas.Text {
-	t := canvas.NewText(value, theme.Color(linuxColorMuted))
-	t.TextSize = size
-	return t
+	return uikit.MutedText(value, size)
 }
 
 func linuxHSpace(width float32) fyne.CanvasObject {
-	r := canvas.NewRectangle(color.Transparent)
-	r.SetMinSize(fyne.NewSize(width, 1))
-	return r
+	return uikit.Gap(width, 1)
 }
 
 func linuxMinSize(obj fyne.CanvasObject, width, height float32) fyne.CanvasObject {
-	r := canvas.NewRectangle(color.Transparent)
-	r.SetMinSize(fyne.NewSize(width, height))
-	return container.NewStack(r, obj)
+	return uikit.MinSize(obj, width, height)
 }
 
 func attachLinuxShell(a fyne.App, w fyne.Window, pages []*linuxPage, initial string) {
@@ -98,15 +90,9 @@ func renderLinuxShell() {
 		p.body.Hide()
 		pageHost.Add(p.body)
 	}
-	header := container.NewBorder(nil, nil, container.NewCenter(linuxShell.headerTitle), linuxShell.headerActions)
-	main := container.NewBorder(
-		container.New(layout.NewCustomPaddedLayout(12, 8, 18, 18), header),
-		buildLinuxBottomBar(),
-		nil, nil,
-		container.New(layout.NewCustomPaddedLayout(0, 10, 18, 18), pageHost),
+	linuxShell.root = uikit.PageFrame(
+		buildLinuxSidebar(), linuxShell.headerTitle, linuxShell.headerActions, buildLinuxBottomBar(), pageHost,
 	)
-	bg := canvas.NewRectangle(theme.Color(theme.ColorNameBackground))
-	linuxShell.root = container.NewBorder(nil, nil, buildLinuxSidebar(), nil, container.NewStack(bg, main))
 	linuxShell.window.SetContent(linuxShell.root)
 	linuxShowPage(linuxShell.current)
 }
@@ -116,13 +102,13 @@ func linuxShowPage(key string) {
 		if p.key != key {
 			p.body.Hide()
 			if p.nav != nil {
-				p.nav.setSelected(false)
+				p.nav.SetSelected(false)
 			}
 			continue
 		}
 		p.body.Show()
 		if p.nav != nil {
-			p.nav.setSelected(true)
+			p.nav.SetSelected(true)
 		}
 		linuxShell.headerTitle.Text = p.title
 		linuxShell.headerTitle.Refresh()
@@ -137,8 +123,7 @@ func linuxShowPage(key string) {
 
 func buildLinuxSidebar() fyne.CanvasObject {
 	brand := container.NewHBox(
-		linuxImage(linuxLogoResource(), 24, "GoAMPP"),
-		linuxHSpace(7),
+		linuxImage(linuxLogoResource(), 22, "GoAMPP"),
 		container.NewCenter(linuxBoldText("GoAMPP", 14)),
 	)
 	nav := container.NewVBox()
@@ -158,13 +143,7 @@ func buildLinuxSidebar() fyne.CanvasObject {
 		linuxVSpace(4),
 		linuxMutedText(linuxVersionLabel(), 10),
 	)
-	bg := canvas.NewRectangle(theme.Color(linuxColorSidebar))
-	edge := canvas.NewRectangle(theme.Color(theme.ColorNameSeparator))
-	return container.NewBorder(
-		nil, nil, nil, container.NewGridWrap(fyne.NewSize(1, 1), edge),
-		container.NewStack(bg, linuxMinSize(container.New(layout.NewCustomPaddedLayout(14, 10, 10, 10),
-			container.NewBorder(brandBlock, footer, nil, nil)), 184, 0)),
-	)
+	return uikit.Sidebar(brandBlock, footer)
 }
 
 func buildLinuxBottomBar() fyne.CanvasObject {
@@ -315,84 +294,18 @@ func linuxLogColor(line string) color.Color {
 	}
 }
 
-type linuxNavItem struct {
-	widget.BaseWidget
-	label    string
-	icon     fyne.Resource
-	selected bool
-	hovered  bool
-	onTap    func()
-	bg       *canvas.Rectangle
-	img      *widget.Icon
-	text     *canvas.Text
-}
+type linuxNavItem = uikit.NavItem
 
 func newLinuxNavItem(label string, icon fyne.Resource, onTap func()) *linuxNavItem {
-	n := &linuxNavItem{label: label, icon: icon, onTap: onTap}
-	n.ExtendBaseWidget(n)
-	return n
+	return uikit.NewNavItem(label, icon, onTap)
 }
-
-func (n *linuxNavItem) CreateRenderer() fyne.WidgetRenderer {
-	n.bg = canvas.NewRectangle(color.Transparent)
-	n.bg.CornerRadius = 6
-	n.img = widget.NewIcon(n.icon)
-	n.text = canvas.NewText(n.label, theme.Color(theme.ColorNameForeground))
-	n.text.TextSize = 12.5
-	row := container.NewHBox(container.NewCenter(container.NewGridWrap(fyne.NewSize(15, 15), n.img)), n.text)
-	content := container.NewStack(n.bg, container.New(layout.NewCustomPaddedLayout(5, 5, 8, 8), row))
-	n.applyState()
-	return widget.NewSimpleRenderer(content)
-}
-
-func (n *linuxNavItem) setSelected(selected bool) {
-	n.selected = selected
-	n.applyState()
-}
-
-func (n *linuxNavItem) applyState() {
-	if n.bg == nil {
-		return
-	}
-	switch {
-	case n.selected:
-		n.bg.FillColor = theme.Color(linuxColorNavActive)
-		n.text.Color = theme.Color(theme.ColorNameForeground)
-		n.text.TextStyle = fyne.TextStyle{Bold: true}
-		n.img.SetResource(n.icon)
-	case n.hovered:
-		n.bg.FillColor = theme.Color(theme.ColorNameHover)
-		n.text.Color = theme.Color(theme.ColorNameForeground)
-		n.text.TextStyle = fyne.TextStyle{}
-		n.img.SetResource(n.icon)
-	default:
-		n.bg.FillColor = color.Transparent
-		n.text.Color = theme.Color(linuxColorMuted)
-		n.text.TextStyle = fyne.TextStyle{}
-		n.img.SetResource(theme.NewDisabledResource(n.icon))
-	}
-	n.bg.Refresh()
-	n.text.Refresh()
-}
-
-func (n *linuxNavItem) Tapped(*fyne.PointEvent) {
-	if n.onTap != nil {
-		n.onTap()
-	}
-}
-func (n *linuxNavItem) MouseIn(*desktop.MouseEvent) { n.hovered = true; n.applyState() }
-func (n *linuxNavItem) MouseMoved(*desktop.MouseEvent) {}
-func (n *linuxNavItem) MouseOut() { n.hovered = false; n.applyState() }
-func (n *linuxNavItem) Cursor() desktop.Cursor { return desktop.PointerCursor }
 
 func linuxVSpace(height float32) fyne.CanvasObject {
-	gap := canvas.NewRectangle(color.Transparent)
-	gap.SetMinSize(fyne.NewSize(1, height))
-	return gap
+	return uikit.Gap(1, height)
 }
 
 func linuxSectionLabel(value string) fyne.CanvasObject {
-	return container.New(layout.NewCustomPaddedLayout(8, 2, 2, 0), linuxMutedText(value, 10.5))
+	return uikit.SectionLabel(value)
 }
 
 func linuxInfoPage(title, body string, icon fyne.Resource) fyne.CanvasObject {
@@ -426,29 +339,29 @@ func linuxRecolorColor(current color.Color, role string) color.Color {
 		dark, light color.Color
 		name         fyne.ThemeColorName
 	}{
-		{linuxDarkPalette.bg, linuxLightPalette.bg, theme.ColorNameBackground},
-		{linuxDarkPalette.sidebar, linuxLightPalette.sidebar, linuxColorSidebar},
-		{linuxDarkPalette.card, linuxLightPalette.card, linuxColorCard},
-		{linuxDarkPalette.border, linuxLightPalette.border, linuxColorCardBorder},
-		{linuxDarkPalette.input, linuxLightPalette.input, theme.ColorNameInputBackground},
-		{linuxDarkPalette.button, linuxLightPalette.button, theme.ColorNameButton},
-		{linuxDarkPalette.hover, linuxLightPalette.hover, theme.ColorNameHover},
-		{linuxDarkPalette.pressed, linuxLightPalette.pressed, theme.ColorNamePressed},
-		{linuxDarkPalette.fg, linuxLightPalette.fg, theme.ColorNameForeground},
-		{linuxDarkPalette.muted, linuxLightPalette.muted, linuxColorMuted},
-		{linuxDarkPalette.primary, linuxLightPalette.primary, theme.ColorNamePrimary},
-		{linuxDarkPalette.navActive, linuxLightPalette.navActive, linuxColorNavActive},
-		{linuxDarkPalette.separator, linuxLightPalette.separator, theme.ColorNameSeparator},
-		{linuxDarkPalette.menu, linuxLightPalette.menu, theme.ColorNameMenuBackground},
-		{linuxDarkPalette.overlay, linuxLightPalette.overlay, theme.ColorNameOverlayBackground},
-		{linuxDarkPalette.header, linuxLightPalette.header, theme.ColorNameHeaderBackground},
-		{linuxDarkPalette.scroll, linuxLightPalette.scroll, theme.ColorNameScrollBar},
-		{linuxDarkPalette.shadow, linuxLightPalette.shadow, theme.ColorNameShadow},
-		{linuxDarkPalette.selection, linuxLightPalette.selection, theme.ColorNameSelection},
-		{linuxDarkPalette.logBg, linuxLightPalette.logBg, linuxColorLogBg},
-		{linuxDarkPalette.placeholder, linuxLightPalette.placeholder, theme.ColorNamePlaceHolder},
-		{linuxDarkPalette.disabled, linuxLightPalette.disabled, theme.ColorNameDisabled},
-		{linuxDarkPalette.disabledBtn, linuxLightPalette.disabledBtn, theme.ColorNameDisabledButton},
+		{linuxDarkPalette.Background, linuxLightPalette.Background, theme.ColorNameBackground},
+		{linuxDarkPalette.Sidebar, linuxLightPalette.Sidebar, linuxColorSidebar},
+		{linuxDarkPalette.Card, linuxLightPalette.Card, linuxColorCard},
+		{linuxDarkPalette.Border, linuxLightPalette.Border, linuxColorCardBorder},
+		{linuxDarkPalette.Input, linuxLightPalette.Input, theme.ColorNameInputBackground},
+		{linuxDarkPalette.Button, linuxLightPalette.Button, theme.ColorNameButton},
+		{linuxDarkPalette.Hover, linuxLightPalette.Hover, theme.ColorNameHover},
+		{linuxDarkPalette.Pressed, linuxLightPalette.Pressed, theme.ColorNamePressed},
+		{linuxDarkPalette.Foreground, linuxLightPalette.Foreground, theme.ColorNameForeground},
+		{linuxDarkPalette.Muted, linuxLightPalette.Muted, linuxColorMuted},
+		{linuxDarkPalette.Primary, linuxLightPalette.Primary, theme.ColorNamePrimary},
+		{linuxDarkPalette.NavActive, linuxLightPalette.NavActive, linuxColorNavActive},
+		{linuxDarkPalette.Separator, linuxLightPalette.Separator, theme.ColorNameSeparator},
+		{linuxDarkPalette.Menu, linuxLightPalette.Menu, theme.ColorNameMenuBackground},
+		{linuxDarkPalette.Overlay, linuxLightPalette.Overlay, theme.ColorNameOverlayBackground},
+		{linuxDarkPalette.Header, linuxLightPalette.Header, theme.ColorNameHeaderBackground},
+		{linuxDarkPalette.Scroll, linuxLightPalette.Scroll, theme.ColorNameScrollBar},
+		{linuxDarkPalette.Shadow, linuxLightPalette.Shadow, theme.ColorNameShadow},
+		{linuxDarkPalette.Selection, linuxLightPalette.Selection, theme.ColorNameSelection},
+		{linuxDarkPalette.LogBackground, linuxLightPalette.LogBackground, linuxColorLogBg},
+		{linuxDarkPalette.Placeholder, linuxLightPalette.Placeholder, theme.ColorNamePlaceHolder},
+		{linuxDarkPalette.Disabled, linuxLightPalette.Disabled, theme.ColorNameDisabled},
+		{linuxDarkPalette.DisabledButton, linuxLightPalette.DisabledButton, theme.ColorNameDisabledButton},
 	}
 	for _, pair := range pairs {
 		switch role {
@@ -474,7 +387,7 @@ func linuxRecolorColor(current color.Color, role string) color.Color {
 func linuxRecolorObject(obj fyne.CanvasObject) {
 	switch item := obj.(type) {
 	case *linuxNavItem:
-		item.applyState()
+		item.RefreshState()
 	case *canvas.Rectangle:
 		item.FillColor = linuxRecolorColor(item.FillColor, "surface")
 		item.StrokeColor = linuxRecolorColor(item.StrokeColor, "surface")

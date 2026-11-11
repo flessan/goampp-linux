@@ -10,21 +10,16 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/driver/desktop"
-	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
 	"goampp/internal/core"
+	"goampp/internal/uikit"
 )
 
 // newCard wraps content in a rounded, bordered surface.
 func newCard(content fyne.CanvasObject) fyne.CanvasObject {
-	bg := canvas.NewRectangle(themeColor(colorCard))
-	bg.CornerRadius = theme.Size(theme.SizeNameCardRadius)
-	bg.StrokeColor = themeColor(colorCardBorder)
-	bg.StrokeWidth = 1
-	return container.NewStack(bg, container.New(layout.NewCustomPaddedLayout(10, 10, 12, 12), content))
+	return uikit.Surface(content, 10, 10, 12, 12)
 }
 
 // newTitledCard is a card with a small heading and optional actions on the right.
@@ -44,16 +39,11 @@ func newTitledCard(title, subtitle string, actions fyne.CanvasObject, body fyne.
 }
 
 func boldText(s string, size float32) *canvas.Text {
-	t := canvas.NewText(s, themeColor(theme.ColorNameForeground))
-	t.TextStyle = fyne.TextStyle{Bold: true}
-	t.TextSize = size
-	return t
+	return uikit.BoldText(s, size)
 }
 
 func mutedText(s string, size float32) *canvas.Text {
-	t := canvas.NewText(s, themeColor(colorMuted))
-	t.TextSize = size
-	return t
+	return uikit.MutedText(s, size)
 }
 
 // wrapMuted is a muted label that wraps, for descriptions.
@@ -73,22 +63,16 @@ func truncLabel(s string) *widget.Label {
 }
 
 func vSpace(h float32) fyne.CanvasObject {
-	r := canvas.NewRectangle(color.Transparent)
-	r.SetMinSize(fyne.NewSize(1, h))
-	return r
+	return uikit.Gap(1, h)
 }
 
 func hSpace(w float32) fyne.CanvasObject {
-	r := canvas.NewRectangle(color.Transparent)
-	r.SetMinSize(fyne.NewSize(w, 1))
-	return r
+	return uikit.Gap(w, 1)
 }
 
 // minSized forces obj to at least the given size.
 func minSized(obj fyne.CanvasObject, w, h float32) fyne.CanvasObject {
-	r := canvas.NewRectangle(color.Transparent)
-	r.SetMinSize(fyne.NewSize(w, h))
-	return container.NewStack(r, obj)
+	return uikit.MinSize(obj, w, h)
 }
 
 func lowButton(label string, icon fyne.Resource, tapped func()) *widget.Button {
@@ -170,116 +154,26 @@ func serviceAvatar(name string, size float32) fyne.CanvasObject {
 
 // ---- sidebar navigation item ----
 
-type navItem struct {
-	widget.BaseWidget
-	label    string
-	icon     fyne.Resource
-	selected bool
-	hovered  bool
-	onTap    func()
-
-	bg   *canvas.Rectangle
-	img  *widget.Icon
-	text *canvas.Text
-}
+type navItem = uikit.NavItem
 
 func newNavItem(label string, icon fyne.Resource, onTap func()) *navItem {
-	n := &navItem{label: label, icon: icon, onTap: onTap}
-	n.ExtendBaseWidget(n)
-	return n
+	return uikit.NewNavItem(label, icon, onTap)
 }
-
-func (n *navItem) CreateRenderer() fyne.WidgetRenderer {
-	n.bg = canvas.NewRectangle(color.Transparent)
-	n.bg.CornerRadius = 6
-	n.img = widget.NewIcon(n.icon)
-	n.text = canvas.NewText(n.label, themeColor(theme.ColorNameForeground))
-	n.text.TextSize = 12.5
-	row := container.NewHBox(container.NewCenter(container.NewGridWrap(fyne.NewSize(15, 15), n.img)), n.text)
-	content := container.NewStack(n.bg, container.New(layout.NewCustomPaddedLayout(5, 5, 8, 8), row))
-	n.applyState()
-	return widget.NewSimpleRenderer(content)
-}
-
-func (n *navItem) setSelected(v bool) {
-	n.selected = v
-	n.applyState()
-}
-
-func (n *navItem) applyState() {
-	if n.bg == nil {
-		return
-	}
-	switch {
-	case n.selected:
-		n.bg.FillColor = themeColor(colorNavActive)
-		n.text.Color = themeColor(theme.ColorNameForeground)
-		n.text.TextStyle = fyne.TextStyle{Bold: true}
-		n.img.SetResource(n.icon)
-	case n.hovered:
-		n.bg.FillColor = themeColor(theme.ColorNameHover)
-		n.text.Color = themeColor(theme.ColorNameForeground)
-		n.text.TextStyle = fyne.TextStyle{}
-		n.img.SetResource(n.icon)
-	default:
-		n.bg.FillColor = color.Transparent
-		n.text.Color = themeColor(colorMuted)
-		n.text.TextStyle = fyne.TextStyle{}
-		n.img.SetResource(theme.NewDisabledResource(n.icon))
-	}
-	n.bg.Refresh()
-	n.text.Refresh()
-}
-
-func (n *navItem) Tapped(*fyne.PointEvent) {
-	if n.onTap != nil {
-		n.onTap()
-	}
-}
-
-func (n *navItem) MouseIn(*desktop.MouseEvent)    { n.hovered = true; n.applyState() }
-func (n *navItem) MouseMoved(*desktop.MouseEvent) {}
-func (n *navItem) MouseOut()                      { n.hovered = false; n.applyState() }
-func (n *navItem) Cursor() desktop.Cursor         { return desktop.PointerCursor }
 
 // ---- segmented control ----
 
 type segmented struct {
-	buttons  []*widget.Button
-	selected int
-	onChange func(int)
-	obj      fyne.CanvasObject
+	shared *uikit.Segmented
+	obj    fyne.CanvasObject
 }
 
 func newSegmented(options []string, onChange func(int)) *segmented {
-	s := &segmented{onChange: onChange}
-	row := container.NewHBox()
-	for i, opt := range options {
-		i := i
-		b := widget.NewButton(opt, func() { s.setSelected(i, true) })
-		s.buttons = append(s.buttons, b)
-		row.Add(b)
-	}
-	bg := canvas.NewRectangle(themeColor(theme.ColorNameInputBackground))
-	bg.CornerRadius = 7
-	s.obj = container.NewStack(bg, container.New(layout.NewCustomPaddedLayout(2, 2, 2, 2), row))
-	s.setSelected(0, false)
-	return s
+	control := uikit.NewSegmented(options, onChange)
+	return &segmented{shared: control, obj: control.Object()}
 }
 
-func (s *segmented) setSelected(i int, notify bool) {
-	s.selected = i
-	for j, b := range s.buttons {
-		if j == i {
-			b.Importance = widget.MediumImportance
-		} else {
-			b.Importance = widget.LowImportance
-		}
-		b.Refresh()
-	}
-	if notify && s.onChange != nil {
-		s.onChange(i)
-	}
+func (s *segmented) setSelected(index int, notify bool) {
+	s.shared.SetSelected(index, notify)
 }
 
 // ---- tappable surface that reports right clicks ----
