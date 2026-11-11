@@ -39,20 +39,16 @@ func buildSettingsPage() (fyne.CanvasObject, fyne.CanvasObject) {
 	// Paths
 	paths := container.NewVBox()
 	addPath := func(label, path string, isDir bool) {
-		open := lowButton("", theme.FolderOpenIcon(), func() {
+		if len(paths.Objects) > 0 {
+			paths.Add(rowDivider())
+		}
+		paths.Add(uikit.SettingsPathRow(label, path, func() {
 			if isDir {
 				core.OpenFolder(path)
 			} else {
 				core.OpenFolder(filepath.Dir(path))
 			}
-		})
-		if len(paths.Objects) > 0 {
-			paths.Add(rowDivider())
-		}
-		value := truncLabel(path)
-		value.Importance = widget.LowImportance
-		paths.Add(container.New(layout.NewCustomPaddedLayout(0, 0, 10, 4),
-			container.NewBorder(nil, nil, minSized(widget.NewLabel(label), 120, 0), open, value)))
+		}))
 	}
 	addPath("Install folder", core.App.BaseDir, true)
 	addPath("Config", filepath.Join(core.App.BaseDir, "config.json"), false)

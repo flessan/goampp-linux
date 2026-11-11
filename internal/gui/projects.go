@@ -11,7 +11,6 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
@@ -100,11 +99,7 @@ func buildProjectsPage() (fyne.CanvasObject, fyne.CanvasObject) {
 		}()
 	}
 
-	form := container.New(layout.NewFormLayout(),
-		widget.NewLabel("Framework"), framework,
-		widget.NewLabel("Name"), name,
-		widget.NewLabel("Domain"), container.NewBorder(nil, nil, nil, minSized(ext, 110, 0), domain),
-	)
+	form := uikit.ProjectForm(framework, name, container.NewBorder(nil, nil, nil, minSized(ext, 110, 0), domain))
 	chips := container.NewHBox()
 	for _, rs := range core.RuntimeStatuses() {
 		p := newStatusPill()

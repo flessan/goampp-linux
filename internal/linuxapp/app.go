@@ -21,7 +21,6 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/driver/desktop"
-	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
@@ -243,8 +242,6 @@ func Run() {
 		nil, nil, nil,
 		container.NewVScroll(linuxPad(serviceList, 4, 10, 2, 2)),
 	)
-	rootLabel := widget.NewLabel(projectDir)
-	rootLabel.Wrapping = fyne.TextWrapBreak
 	projectNameEntry := widget.NewEntry()
 	projectNameEntry.SetPlaceHolder("my-first-project")
 	templateSelect := widget.NewSelect(projectCreationOptions(), nil)
@@ -406,10 +403,7 @@ func Run() {
 	)
 	createButton.Importance = widget.HighImportance
 	creation := container.NewVBox(
-		container.New(layout.NewFormLayout(),
-			widget.NewLabel("Framework"), templateSelect,
-			widget.NewLabel("Name"), projectNameEntry,
-		),
+		uikit.ProjectForm(templateSelect, projectNameEntry, nil),
 		templateDescription,
 		linuxVSpace(4),
 		container.NewBorder(nil, nil, nil, createButton, projectStatus),
@@ -477,15 +471,11 @@ func Run() {
 		), 8, 8, 12, 12)
 	}
 
-	settingsPaths := linuxPad(container.NewVBox(
-		widget.NewLabelWithStyle("Project workspace", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		rootLabel,
-		widget.NewButtonWithIcon("Open workspace", theme.FolderOpenIcon(), func() {
-			if err := openExternal(projectDir); err != nil {
-				dialog.ShowError(err, w)
-			}
-		}),
-	), 10, 10, 12, 12)
+	settingsPaths := uikit.SettingsPathRow("Project workspace", projectDir, func() {
+		if err := openExternal(projectDir); err != nil {
+			dialog.ShowError(err, w)
+		}
+	})
 	settingsTools := linuxPad(container.NewVBox(
 		widget.NewLabelWithStyle("System package manager", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewLabel("Service installation and system changes remain explicit user actions."),

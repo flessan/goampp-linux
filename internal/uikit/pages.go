@@ -3,6 +3,7 @@ package uikit
 import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
@@ -56,4 +57,24 @@ func SettingsPage(appearance, paths, tools, about, behavior fyne.CanvasObject) f
 // StartupServiceCard aligns a service logo with its platform-provided controls.
 func StartupServiceCard(avatar, content, actions fyne.CanvasObject) fyne.CanvasObject {
 	return Surface(container.NewBorder(nil, nil, avatar, actions, content), 10, 10, 12, 12)
+}
+
+// ProjectForm provides the reference field order. A domain control is only
+// supplied when the platform can configure a domain during creation.
+func ProjectForm(framework, name, domain fyne.CanvasObject) fyne.CanvasObject {
+	fields := []fyne.CanvasObject{widget.NewLabel("Framework"), framework, widget.NewLabel("Name"), name}
+	if domain != nil {
+		fields = append(fields, widget.NewLabel("Domain"), domain)
+	}
+	return container.New(layout.NewFormLayout(), fields...)
+}
+
+// SettingsPathRow presents a path with the Windows label and folder action.
+func SettingsPathRow(label, path string, open func()) fyne.CanvasObject {
+	button := widget.NewButtonWithIcon("", theme.FolderOpenIcon(), open)
+	button.Importance = widget.LowImportance
+	value := widget.NewLabel(path)
+	value.Truncation = fyne.TextTruncateEllipsis
+	value.Importance = widget.LowImportance
+	return Pad(container.NewBorder(nil, nil, MinSize(widget.NewLabel(label), 120, 0), button, value), 0, 0, 10, 4)
 }
