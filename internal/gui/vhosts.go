@@ -16,6 +16,7 @@ import (
 
 	"goampp/internal/config"
 	"goampp/internal/core"
+	"goampp/internal/uikit"
 )
 
 var vhostUI struct {
@@ -44,7 +45,7 @@ func buildVhostsPage() (fyne.CanvasObject, fyne.CanvasObject) {
 	)
 	vhostUI.list.OnSelected = func(id widget.ListItemID) { selectVhost(id) }
 	vhostUI.empty = container.NewCenter(mutedText("No virtual hosts yet — add one on the right.", 13))
-	left := newTitledCard("Domains", "Select a domain to edit it.", nil, container.NewStack(vhostUI.list, vhostUI.empty))
+	list := container.NewStack(vhostUI.list, vhostUI.empty)
 
 	vhostUI.name = widget.NewEntry()
 	vhostUI.name.SetPlaceHolder("myapp")
@@ -90,10 +91,8 @@ func buildVhostsPage() (fyne.CanvasObject, fyne.CanvasObject) {
 	applyBtn := lowButton("Re-apply all", theme.ViewRefreshIcon(), core.ApplyVhostsAuto)
 	actions := container.NewHBox(applyBtn, newBtn)
 
-	split := container.NewHSplit(left, container.NewVBox(right))
-	split.Offset = 0.52
 	clearVhostForm()
-	return actions, split
+	return actions, uikit.VirtualHostsPage(list, container.NewVBox(right))
 }
 
 type vhostRow struct {

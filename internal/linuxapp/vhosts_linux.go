@@ -16,6 +16,8 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+
+	"goampp/internal/uikit"
 )
 
 type linuxVHost struct {
@@ -113,7 +115,7 @@ func linuxHostConfig(host linuxVHost) string {
 	return strings.Join(snippets, "\n\n")
 }
 
-func buildLinuxVHostsPage(w fyne.Window, projectDir string) fyne.CanvasObject {
+func buildLinuxVHostsPage(w fyne.Window, projectDir string) (fyne.CanvasObject, fyne.CanvasObject) {
 	hosts, loadErr := loadLinuxVHosts()
 	var selected = -1
 	list := widget.NewList(
@@ -328,21 +330,17 @@ func buildLinuxVHostsPage(w fyne.Window, projectDir string) fyne.CanvasObject {
 		widget.NewLabel("Web server"), server,
 	)
 	formCard := linuxSurface(container.NewVBox(
-		linuxBoldText("Virtual host", 14),
+		linuxBoldText("New virtual host", 15),
 		linuxMutedText("Manage host definitions and generate Apache/Nginx snippets.", 11.5),
-		linuxVSpace(8),
+		linuxVSpace(4),
 		form,
-		linuxVSpace(8),
-		container.NewHBox(save, newHost, toggle, remove),
+		linuxVSpace(6),
+		container.NewHBox(save, toggle, layout.NewSpacer(), remove),
 		linuxVSpace(4),
 		container.NewHBox(copySnippet, copyHosts),
 		linuxVSpace(6),
 		status,
 	), 10, 10, 12, 12)
-	listCard := linuxSurface(container.NewBorder(
-		linuxPad(linuxBoldText("Saved hosts", 14), 0, 8, 0, 0),
-		nil, nil, nil, list,
-	), 8, 8, 10, 10)
 	if loadErr != nil {
 		status.SetText("Could not load saved hosts: " + loadErr.Error())
 	}
@@ -352,9 +350,9 @@ func buildLinuxVHostsPage(w fyne.Window, projectDir string) fyne.CanvasObject {
 	} else {
 		docroot.SetText(projectDir)
 	}
-	return container.NewVScroll(linuxPad(container.NewVBox(
-		formCard,
-		linuxVSpace(8),
-		listCard,
-	), 0, 10, 0, 0))
+	save.Importance = widget.HighImportance
+	newHost.Importance = widget.MediumImportance
+	toggle.Importance = widget.LowImportance
+	remove.Importance = widget.DangerImportance
+	return container.NewHBox(newHost), uikit.VirtualHostsPage(list, container.NewVScroll(container.NewVBox(formCard)))
 }
