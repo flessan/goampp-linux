@@ -7,8 +7,15 @@ need go
 export CGO_ENABLED=1
 format() {
   need git; need gofmt
-  mapfile -d '' files < <(git ls-files -z -- '*.go')
-  ((${#files[@]})) || { echo 'No tracked Go files found' >&2; exit 1; }
+  local -a files=()
+  if [[ -n ${GOAMPP_FORMAT_BASE:-} ]]; then
+    git rev-parse --verify "${GOAMPP_FORMAT_BASE}^{commit}" >/dev/null
+    mapfile -d '' files < <(git diff --name-only -z --diff-filter=ACMRT "$GOAMPP_FORMAT_BASE" -- '*.go')
+    while IFS= read -r -d '' file; do files+=("$file"); done < <(git ls-files -z --others --exclude-standard -- '*.go')
+  else
+    mapfile -d '' files < <(git ls-files -z -- '*.go')
+  fi
+  if ((${#files[@]} == 0)); then echo 'No Go files to check'; return 0; fi
   local unformatted
   unformatted=$(gofmt -l "${files[@]}")
   if [[ -n "$unformatted" ]]; then printf 'Go files needing formatting:\n%s\n' "$unformatted" >&2; return 1; fi

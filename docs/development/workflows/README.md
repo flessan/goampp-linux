@@ -64,8 +64,13 @@ On Windows PowerShell:
 ./scripts/visual-tests/capture-windows.ps1
 ```
 
-The format check covers all tracked Go files, including pre-existing code; it
-may report unrelated formatting debt. The native Windows build is not the
+By default the format check covers all tracked Go files, including pre-existing
+formatting debt. To check only files changed since a locally available base
+commit (plus untracked Go files), set `GOAMPP_FORMAT_BASE` to that commit or a
+ref, for example `GOAMPP_FORMAT_BASE=origin/main scripts/ci/linux.sh format` or
+`$env:GOAMPP_FORMAT_BASE = 'origin/main'` before the PowerShell command. The
+cross-platform template uses the PR base SHA and full checkout history; a manual
+workflow run defaults to the full repository check. The native Windows build is not the
 installer or release workflow. The test job includes the Windows build smoke
 test. Both capture scripts accept an optional output directory and fail if an
 expected image is missing. They delete only the expected capture filenames

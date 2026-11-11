@@ -14,8 +14,17 @@ function Invoke-Go([string[]]$Arguments) {
 }
 function Test-Format {
     if (-not (Get-Command git -ErrorAction SilentlyContinue)) { throw 'git is required' }
-    $files = @(git ls-files -- '*.go')
-    if ($LASTEXITCODE -ne 0 -or $files.Count -eq 0) { throw 'Could not list Go files' }
+    if ($env:GOAMPP_FORMAT_BASE) {
+        & git rev-parse --verify "$($env:GOAMPP_FORMAT_BASE)^{commit}" | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw 'Invalid GOAMPP_FORMAT_BASE' }
+        $files = @(git diff --name-only --diff-filter=ACMRT $env:GOAMPP_FORMAT_BASE -- '*.go')
+        if ($LASTEXITCODE -ne 0) { throw 'Could not list changed Go files' }
+        $files += @(git ls-files --others --exclude-standard -- '*.go')
+    } else {
+        $files = @(git ls-files -- '*.go')
+    }
+    if ($LASTEXITCODE -ne 0) { throw 'Could not list Go files' }
+    if ($files.Count -eq 0) { Write-Host 'No Go files to check'; return }
     $unformatted = @(gofmt -l $files)
     if ($LASTEXITCODE -ne 0) { throw 'gofmt failed' }
     if ($unformatted.Count -gt 0) { throw "Go files needing formatting:`n$($unformatted -join "`n")" }

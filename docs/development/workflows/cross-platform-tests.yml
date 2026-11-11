@@ -13,6 +13,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
@@ -26,12 +28,16 @@ jobs:
         run: scripts/ci/install-linux-deps.sh
       - name: Linux format, vet, tests and race
         if: runner.os == 'Linux'
+        env:
+          GOAMPP_FORMAT_BASE: ${{ github.event.pull_request.base.sha }}
         run: |
           scripts/ci/linux.sh format
           scripts/ci/linux.sh test
           scripts/ci/linux.sh race
       - name: Windows format, vet and tests
         if: runner.os == 'Windows'
+        env:
+          GOAMPP_FORMAT_BASE: ${{ github.event.pull_request.base.sha }}
         shell: pwsh
         run: |
           ./scripts/ci/windows.ps1 -Mode format
