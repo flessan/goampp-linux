@@ -17,6 +17,7 @@ import (
 
 	"goampp/internal/config"
 	"goampp/internal/core"
+	"goampp/internal/uikit"
 	"goampp/internal/vhost"
 )
 
@@ -64,11 +65,8 @@ func buildEditorPage() (fyne.CanvasObject, fyne.CanvasObject) {
 		}
 	})
 	save := importantButton("Save", theme.DocumentSaveIcon(), widget.HighImportance, saveEditorBuffer)
-	actions := container.NewHBox(minSized(edUI.files, 240, 0), reload, save)
-
-	top := container.NewBorder(nil, nil, nil, container.NewHBox(container.NewCenter(edUI.dirty.obj), open), edUI.pathText)
-	body := newCard(container.NewBorder(container.NewVBox(top, vSpace(4)), nil, nil, nil, edUI.content))
-	return actions, body
+	return uikit.ConfigEditorPage(edUI.files, []fyne.CanvasObject{reload, save}, edUI.pathText,
+		container.NewHBox(container.NewCenter(edUI.dirty.obj), open), nil, edUI.content)
 }
 
 func populateEditorDropdown() {

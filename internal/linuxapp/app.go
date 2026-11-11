@@ -556,11 +556,12 @@ func Run() {
 		), 10, 10, 12, 12),
 	), 8, 12, 14, 14))
 
+	editorActions, editorPage := buildLinuxConfigEditorPage(w)
 	pages := []*linuxPage{
 		{key: "services", title: "Services", icon: theme.ComputerIcon(), actions: refreshButton, body: servicePage},
 		{key: "projects", title: "Projects", icon: theme.FolderIcon(), actions: projectActions, body: projectsPage},
 		{key: "vhosts", title: "Virtual Hosts", icon: theme.HomeIcon(), body: buildLinuxVHostsPage(w, projectDir)},
-		{key: "editor", title: "Config Editor", icon: theme.DocumentCreateIcon(), body: buildLinuxConfigEditorPage(w)},
+		{key: "editor", title: "Config Editor", icon: theme.DocumentCreateIcon(), actions: editorActions, body: editorPage},
 		{key: "startup", title: "Startup", icon: theme.MediaPlayIcon(), body: buildLinuxStartupPage(w)},
 		{key: "settings", title: "Settings", icon: theme.SettingsIcon(), body: settingsPage},
 	}
