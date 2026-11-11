@@ -1,0 +1,28 @@
+name: Windows build (template)
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Ensure Windows compiler is available
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/ci/install-windows-deps.ps1
+      - name: Build native Windows executable
+        shell: pwsh
+        run: ./scripts/ci/windows.ps1 -Mode build
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows-build
+          path: dist/windows/goampp.exe
+          if-no-files-found: error
+          retention-days: 7

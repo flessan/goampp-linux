@@ -1,0 +1,38 @@
+name: Cross-platform checks (template)
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Ensure Windows compiler is available
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/ci/install-windows-deps.ps1
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: scripts/ci/install-linux-deps.sh
+      - name: Linux format, vet, tests and race
+        if: runner.os == 'Linux'
+        run: |
+          scripts/ci/linux.sh format
+          scripts/ci/linux.sh test
+          scripts/ci/linux.sh race
+      - name: Windows format, vet and tests
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          ./scripts/ci/windows.ps1 -Mode format
+          ./scripts/ci/windows.ps1 -Mode test

@@ -29,3 +29,7 @@ visual regression coverage, add deterministic Linux fixtures for all pages,
 normalize corresponding page state, capture native UI and dialogs on both OSes,
 and retain/review the generated images as CI artifacts. The current PR
 connection cannot modify workflow files, so automated upload is not enabled.
+
+Reusable capture and comparison scripts, prerequisites, and proposed (not
+active) workflow templates are documented in
+[development/workflows](development/workflows/README.md).
