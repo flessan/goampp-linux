@@ -94,3 +94,13 @@ func VirtualHostForm(domain, documentRoot, port, server fyne.CanvasObject) fyne.
 func EmptyVirtualHosts() fyne.CanvasObject {
 	return container.NewCenter(MutedText("No virtual hosts yet — add one on the right.", 13))
 }
+
+// VirtualHostEditor shares the reference card and form spacing; optional
+// supplemental controls remain supplied by the platform integration.
+func VirtualHostEditor(title fyne.CanvasObject, description string, form, actions, extra fyne.CanvasObject) fyne.CanvasObject {
+	content := []fyne.CanvasObject{title, MutedText(description, 11.5), Gap(1, 4), form, Gap(1, 6), actions}
+	if extra != nil {
+		content = append(content, extra)
+	}
+	return Surface(container.NewVBox(content...), 10, 10, 12, 12)
+}

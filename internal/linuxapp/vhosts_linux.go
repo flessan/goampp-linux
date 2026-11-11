@@ -345,18 +345,10 @@ func buildLinuxVHostsPage(w fyne.Window, projectDir string) (fyne.CanvasObject, 
 	})
 	browse.Importance = widget.LowImportance
 	form := uikit.VirtualHostForm(domain, container.NewBorder(nil, nil, nil, browse, docroot), port, server)
-	formCard := linuxSurface(container.NewVBox(
-		formTitle,
-		linuxMutedText("Manage host definitions and generate Apache/Nginx snippets.", 11.5),
-		linuxVSpace(4),
-		form,
-		linuxVSpace(6),
+	formCard := uikit.VirtualHostEditor(formTitle,
+		"Manage host definitions and generate Apache/Nginx snippets.", form,
 		container.NewHBox(save, toggle, layout.NewSpacer(), remove),
-		linuxVSpace(4),
-		container.NewHBox(copySnippet, copyHosts),
-		linuxVSpace(6),
-		status,
-	), 10, 10, 12, 12)
+		container.NewVBox(linuxVSpace(4), container.NewHBox(copySnippet, copyHosts), linuxVSpace(6), status))
 	if loadErr != nil {
 		status.SetText("Could not load saved hosts: " + loadErr.Error())
 	}

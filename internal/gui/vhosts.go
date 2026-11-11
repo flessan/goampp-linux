@@ -75,12 +75,9 @@ func buildVhostsPage() (fyne.CanvasObject, fyne.CanvasObject) {
 	vhostUI.toggleBtn = lowButton("Disable", theme.VisibilityOffIcon(), toggleSelectedVhost)
 	vhostUI.delBtn = importantButton("Delete", theme.DeleteIcon(), widget.DangerImportance, deleteSelectedVhost)
 	vhostUI.formTitle = boldText("New virtual host", 15)
-	right := newCard(container.NewVBox(
-		vhostUI.formTitle,
-		mutedText("Saved changes are applied to hosts and the web server automatically.", 11.5),
-		vSpace(4), form, vSpace(6),
-		container.NewHBox(save, vhostUI.toggleBtn, layout.NewSpacer(), vhostUI.delBtn),
-	))
+	right := uikit.VirtualHostEditor(vhostUI.formTitle,
+		"Saved changes are applied to hosts and the web server automatically.", form,
+		container.NewHBox(save, vhostUI.toggleBtn, layout.NewSpacer(), vhostUI.delBtn), nil)
 
 	newBtn := importantButton("New", theme.ContentAddIcon(), widget.MediumImportance, func() {
 		vhostUI.list.UnselectAll()
