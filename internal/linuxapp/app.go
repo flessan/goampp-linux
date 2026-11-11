@@ -348,7 +348,7 @@ func Run() {
 			})
 		},
 		Dispatch: fyne.Do,
-		Invalid:  func(err error) { dialog.ShowInformation("Projects", err.Error(), w) },
+		Window:   w,
 		Started: func(request uikit.ProjectRequest) {
 			createButton.Disable()
 			projectNameEntry.Disable()

@@ -3,6 +3,9 @@ package uikit
 import (
 	"errors"
 	"strings"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/dialog"
 )
 
 // ProjectRequest is the captured form state for one creation operation.
@@ -19,6 +22,9 @@ type ProjectCreator struct {
 	Prepare  func(ProjectRequest) (ProjectRequest, error)
 	Create   func(ProjectRequest) (string, error)
 	Dispatch func(func())
+	// Window is used for the shared project validation dialog. Invalid can be
+	// supplied instead for tests or an alternative host.
+	Window   fyne.Window
 	Invalid  func(error)
 	Started  func(ProjectRequest)
 	Finished func(ProjectRequest, string, error)
@@ -31,16 +37,16 @@ func (c *ProjectCreator) Submit(request ProjectRequest) {
 		return
 	}
 	if strings.TrimSpace(request.Framework) == "" {
-		c.Invalid(errors.New("Pick a framework first."))
+		c.showInvalid(errors.New("Pick a framework first."))
 		return
 	}
 	request, err := c.Prepare(request)
 	if err != nil {
-		c.Invalid(err)
+		c.showInvalid(err)
 		return
 	}
 	if strings.TrimSpace(request.Name) == "" {
-		c.Invalid(errors.New("A project name is required."))
+		c.showInvalid(errors.New("A project name is required."))
 		return
 	}
 	c.Busy = true
@@ -52,4 +58,12 @@ func (c *ProjectCreator) Submit(request ProjectRequest) {
 			c.Finished(request, result, err)
 		})
 	}()
+}
+
+func (c *ProjectCreator) showInvalid(err error) {
+	if c.Invalid != nil {
+		c.Invalid(err)
+		return
+	}
+	dialog.ShowInformation("Projects", err.Error(), c.Window)
 }

@@ -79,7 +79,7 @@ func buildProjectsPage() (fyne.CanvasObject, fyne.CanvasObject) {
 			return "", err
 		},
 		Dispatch: core.UiDo,
-		Invalid:  func(err error) { dialog.ShowInformation("Projects", err.Error(), core.App.Win) },
+		Window:   core.App.Win,
 		Started: func(request uikit.ProjectRequest) {
 			core.App.AppendLog(fmt.Sprintf("projects: creating '%s' (%s) at %s ...", request.Name, request.Framework, request.Domain))
 			core.SetStatus(fmt.Sprintf("Creating %s...", request.Name))
