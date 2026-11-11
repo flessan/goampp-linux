@@ -6,6 +6,7 @@ package uikit
 import (
 	"image/color"
 	"strings"
+	"unicode"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -65,6 +66,52 @@ func MutedText(value string, size float32) *canvas.Text {
 	return text
 }
 
+// Avatar is the Windows service/logo treatment, including its fallback mark.
+func Avatar(resource fyne.Resource, name string, size float32) fyne.CanvasObject {
+	if resource != nil {
+		img := canvas.NewImageFromResource(resource)
+		img.FillMode = canvas.ImageFillContain
+		img.ScaleMode = canvas.ImageScaleSmooth
+		return container.NewGridWrap(fyne.NewSize(size, size), img)
+	}
+	palette := []uint32{0x7c6cff, 0x22c55e, 0xf59e0b, 0x06b6d4, 0xec4899, 0x3b82f6, 0xef4444, 0x14b8a6}
+	sum := 0
+	for _, r := range name {
+		sum += int(r)
+	}
+	bg := canvas.NewRectangle(Hex(palette[sum%len(palette)]))
+	bg.CornerRadius = size / 4
+	letter := "?"
+	for _, r := range name {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			letter = strings.ToUpper(string(r))
+			break
+		}
+	}
+	text := canvas.NewText(letter, color.White)
+	text.TextStyle = fyne.TextStyle{Bold: true}
+	text.TextSize = size * 0.5
+	text.Alignment = fyne.TextAlignCenter
+	return container.NewGridWrap(fyne.NewSize(size, size), container.NewStack(bg, container.NewCenter(text)))
+}
+
+// ServiceIdentity places the icon, name, version and badge as in the Windows list.
+func ServiceIdentity(avatar, title, version, badge fyne.CanvasObject) fyne.CanvasObject {
+	objects := []fyne.CanvasObject{Gap(4, 1), container.NewCenter(avatar), Gap(2, 1), container.NewCenter(title)}
+	if version != nil {
+		objects = append(objects, container.NewCenter(version))
+	}
+	if badge != nil {
+		objects = append(objects, container.NewCenter(badge))
+	}
+	return container.NewHBox(objects...)
+}
+
+// ServiceRow is the common compact Windows service list layout.
+func ServiceRow(identity, controls fyne.CanvasObject) fyne.CanvasObject {
+	return Pad(container.NewBorder(nil, nil, identity, controls), 3, 3, 6, 6)
+}
+
 // Divider returns the shared one-pixel separator used between compact rows.
 func Divider() fyne.CanvasObject {
 	line := canvas.NewRectangle(theme.Color(theme.ColorNameSeparator))
@@ -75,6 +122,12 @@ func Divider() fyne.CanvasObject {
 // SectionLabel is the standard uppercase section heading used across pages.
 func SectionLabel(value string) fyne.CanvasObject {
 	return Pad(MutedText(value, 10.5), 8, 2, 2, 0)
+}
+
+// SettingsRow is the Windows settings label and control layout.
+func SettingsRow(title, description string, control fyne.CanvasObject) fyne.CanvasObject {
+	left := container.NewVBox(BoldText(title, 12.5), MutedText(description, 11.5))
+	return Pad(container.NewBorder(nil, nil, left, container.NewCenter(control)), 8, 8, 12, 8)
 }
 
 // Sidebar provides the common sidebar frame, divider, width and padding.
@@ -107,9 +160,8 @@ func PageFrame(sidebar, title, actions, bottom, pageHost fyne.CanvasObject) fyne
 	return container.NewBorder(nil, nil, sidebar, nil, container.NewStack(background, main))
 }
 
-
 // Segmented is the shared compact tab selector used for service filters and
- // appearance controls on both desktop platforms.
+// appearance controls on both desktop platforms.
 type Segmented struct {
 	buttons  []*widget.Button
 	selected int
@@ -262,9 +314,9 @@ func HexA(value uint32, alpha uint8) color.NRGBA {
 // Palette is the single source of truth for GoAMPP's shared desktop colors.
 type Palette struct {
 	Background, Sidebar, Card, Border, Input, Button, Hover, Pressed color.Color
-	Foreground, Muted, Primary, NavActive, Separator color.Color
-	Menu, Overlay, Header, Scroll, Shadow, Selection, LogBackground color.Color
-	Placeholder, Disabled, DisabledButton color.Color
+	Foreground, Muted, Primary, NavActive, Separator                 color.Color
+	Menu, Overlay, Header, Scroll, Shadow, Selection, LogBackground  color.Color
+	Placeholder, Disabled, DisabledButton                            color.Color
 }
 
 func PaletteForVariant(variant fyne.ThemeVariant) Palette {
@@ -300,8 +352,12 @@ type Theme struct {
 
 func NewTheme(preference string) *Theme {
 	result := &Theme{}
-	if strings.EqualFold(strings.TrimSpace(preference), "dark") {
+	switch strings.ToLower(strings.TrimSpace(preference)) {
+	case "dark":
 		variant := theme.VariantDark
+		result.forced = &variant
+	case "light":
+		variant := theme.VariantLight
 		result.forced = &variant
 	}
 	return result

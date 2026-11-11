@@ -23,13 +23,14 @@ const (
 const (
 	themePrefKey = "theme"
 	themeSystem  = "System"
+	themeLight   = "Light"
 	themeDark    = "Dark"
 )
 
-type goamppTheme = uikit.Theme
+type goamppTheme struct{ *uikit.Theme }
 
 func newGoamppTheme(preference string) *goamppTheme {
-	return uikit.NewTheme(preference)
+	return &goamppTheme{uikit.NewTheme(preference)}
 }
 
 // hex helpers remain available to the Windows-only custom avatar widgets.
@@ -49,4 +50,13 @@ var (
 
 func themeColor(name fyne.ThemeColorName) color.Color {
 	return theme.Color(name)
+}
+
+// Font preserves the Windows UI's native typography. Fyne's bundled fonts
+// remain the fallback when a system font is not available.
+func (t *goamppTheme) Font(style fyne.TextStyle) fyne.Resource {
+	if f := systemFont(style); f != nil {
+		return f
+	}
+	return t.Theme.Font(style)
 }

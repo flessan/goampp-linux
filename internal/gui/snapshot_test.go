@@ -36,7 +36,7 @@ func TestGUISnapshots(t *testing.T) {
 	}
 	core.App.AppendLog("GoAMPP started — 30 services, 1 vhost loaded from config.json")
 
-	for _, variant := range []string{themeSystem, themeDark} {
+	for _, variant := range []string{themeSystem, themeLight, themeDark} {
 		a := test.NewTempApp(t)
 		a.Settings().SetTheme(newGoamppTheme(variant))
 		w := test.NewTempWindow(t, nil)

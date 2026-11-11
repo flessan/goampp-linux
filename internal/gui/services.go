@@ -11,7 +11,6 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
@@ -172,14 +171,7 @@ func newServiceCard(ms *core.ManagedService) *svcCard {
 	c.badge.TextStyle = fyne.TextStyle{Bold: true}
 
 	title := boldText(name, 12.5)
-	left := container.NewHBox(
-		hSpace(4),
-		container.NewCenter(serviceAvatar(name, 20)),
-		hSpace(2),
-		container.NewCenter(title),
-		container.NewCenter(c.version),
-		container.NewCenter(c.badge),
-	)
+	left := uikit.ServiceIdentity(serviceAvatar(name, 20), title, c.version, c.badge)
 
 	c.status = newStatusPill()
 	c.progress = widget.NewProgressBar()
@@ -212,7 +204,7 @@ func newServiceCard(ms *core.ManagedService) *svcCard {
 		minSized(c.primary, actionColW, 0),
 		c.more,
 	)
-	row := container.New(layout.NewCustomPaddedLayout(3, 3, 6, 6), container.NewBorder(nil, nil, left, right))
+	row := uikit.ServiceRow(left, right)
 	c.obj = newContextSurface(row, func(pos fyne.Position) {
 		widget.ShowPopUpMenuAtPosition(serviceMenu(c), core.App.Win.Canvas(), pos)
 	})
