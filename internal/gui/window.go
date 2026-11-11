@@ -87,7 +87,7 @@ func guiStatus(text string) {
 func Run(startHidden bool, onReady func()) {
 	a := fyneapp.NewWithID(appID)
 	themePreference := a.Preferences().StringWithFallback(themePrefKey, themeSystem)
-	if themePreference != themeSystem && themePreference != themeDark {
+	if themePreference != themeSystem && themePreference != themeLight && themePreference != themeDark {
 		themePreference = themeSystem
 		a.Preferences().SetString(themePrefKey, themePreference)
 	}

@@ -4,8 +4,6 @@ package gui
 
 import (
 	"image/color"
-	"strings"
-	"unicode"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -118,38 +116,12 @@ func (p *statusPill) set(text string, c color.Color) {
 
 // ---- letter avatar for services without a logo ----
 
-var avatarColors = []uint32{0x7c6cff, 0x22c55e, 0xf59e0b, 0x06b6d4, 0xec4899, 0x3b82f6, 0xef4444, 0x14b8a6}
-
 func letterAvatar(name string, size float32) fyne.CanvasObject {
-	sum := 0
-	for _, r := range name {
-		sum += int(r)
-	}
-	bg := canvas.NewRectangle(hex(avatarColors[sum%len(avatarColors)]))
-	bg.CornerRadius = size / 4
-	letter := "?"
-	for _, r := range name {
-		if unicode.IsLetter(r) || unicode.IsDigit(r) {
-			letter = strings.ToUpper(string(r))
-			break
-		}
-	}
-	t := canvas.NewText(letter, color.White)
-	t.TextStyle = fyne.TextStyle{Bold: true}
-	t.TextSize = size * 0.5
-	t.Alignment = fyne.TextAlignCenter
-	return container.NewGridWrap(fyne.NewSize(size, size), container.NewStack(bg, container.NewCenter(t)))
+	return uikit.Avatar(nil, name, size)
 }
 
 func serviceAvatar(name string, size float32) fyne.CanvasObject {
-	res := serviceIcon(name)
-	if res == nil {
-		return letterAvatar(name, size)
-	}
-	img := canvas.NewImageFromResource(res)
-	img.FillMode = canvas.ImageFillContain
-	img.ScaleMode = canvas.ImageScaleSmooth
-	return container.NewGridWrap(fyne.NewSize(size, size), img)
+	return uikit.Avatar(serviceIcon(name), name, size)
 }
 
 // ---- sidebar navigation item ----

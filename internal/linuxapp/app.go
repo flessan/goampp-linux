@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -90,9 +89,8 @@ var toolDefinitions = []toolDefinition{
 func Run() {
 	a := app.NewWithID("cc.thio.goampp.linux")
 	themePreference := a.Preferences().StringWithFallback("theme", "System")
-	// Light mode is intentionally not exposed until its palette is complete.
-	// Reset old saved Light preferences to System so existing installs recover cleanly.
-	if themePreference != "Dark" && themePreference != "System" {
+	// Reset unrecognized saved preferences to the system theme.
+	if themePreference != "Dark" && themePreference != "Light" && themePreference != "System" {
 		themePreference = "System"
 		a.Preferences().SetString("theme", themePreference)
 	}
@@ -461,7 +459,7 @@ func Run() {
 	), 0, 12, 0, 0))
 	refreshProjects()
 
-	themes := []string{"System", "Dark"}
+	themes := []string{"System", "Light", "Dark"}
 	themeControl := newLinuxSegmented(themes, func(index int) {
 		preference := themes[index]
 		a.Preferences().SetString("theme", preference)
@@ -476,26 +474,7 @@ func Run() {
 			break
 		}
 	}
-	contributeURL, _ := url.Parse("https://github.com/flessan/goampp-linux")
-	lightModeInfo := uikit.Surface(container.NewVBox(
-		container.NewHBox(
-			widget.NewIcon(theme.InfoIcon()),
-			uikit.BoldText("Light mode is not available yet", 12.5),
-		),
-		widget.NewLabel("Flessan, the maintainer working on this project, has not finished the light theme yet. Contributions are open on GitHub if you'd like to help build it."),
-		widget.NewHyperlink("Contribute on GitHub", contributeURL),
-	), 8, 8, 12, 12)
-	appearanceRow := container.NewVBox(
-		container.New(layout.NewCustomPaddedLayout(8, 8, 12, 8), container.NewBorder(
-			nil, nil,
-			container.NewVBox(
-				widget.NewLabelWithStyle("Theme", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-				widget.NewLabel("System follows your Linux desktop appearance. Dark is always available."),
-			),
-			container.NewCenter(themeControl.obj),
-		)),
-		lightModeInfo,
-	)
+	appearanceRow := uikit.SettingsRow("Theme", "System follows your Linux desktop appearance.", themeControl.obj)
 
 	var trayPreference fyne.CanvasObject
 	if trayAvailable {
@@ -524,7 +503,7 @@ func Run() {
 		linuxSectionLabel("BEHAVIOR"),
 		trayPreference,
 		linuxSectionLabel("APPEARANCE"),
-		linuxSurface(appearanceRow, 2, 2, 2, 2),
+		linuxSurface(appearanceRow, 2, 2, 0, 0),
 		linuxSectionLabel("PATHS"),
 		linuxSurface(container.NewVBox(
 			widget.NewLabelWithStyle("Project workspace", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
@@ -631,15 +610,11 @@ func makeServiceCard(w fyne.Window, state serviceState, refresh func()) fyne.Can
 	case "Stopped":
 		statusAccent = theme.Color(theme.ColorNameWarning)
 	}
-	titleLabel := widget.NewLabelWithStyle(state.Definition.Name, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+	titleLabel := uikit.BoldText(state.Definition.Name, 12.5)
 	detailLabel := widget.NewLabel(detail)
 	detailLabel.SizeName = theme.SizeNameCaptionText
 	detailLabel.Truncation = fyne.TextTruncateEllipsis
-	identity := container.NewHBox(
-		linuxImage(linuxServiceResource(state.Definition.Name), 20, state.Definition.Name),
-		linuxHGap(8),
-		container.NewVBox(titleLabel, detailLabel),
-	)
+	identity := uikit.ServiceIdentity(linuxImage(linuxServiceResource(state.Definition.Name), 20, state.Definition.Name), titleLabel, detailLabel, nil)
 
 	var action *widget.Button
 	action = widget.NewButtonWithIcon("Start", theme.MediaPlayIcon(), func() {
@@ -668,13 +643,12 @@ func makeServiceCard(w fyne.Window, state serviceState, refresh func()) fyne.Can
 	moreButton.Importance = widget.LowImportance
 	right := container.NewHBox(
 		linuxMinSize(linuxStatusBadge(status, statusAccent), 120, 0),
+		linuxHSpace(78),
 		linuxMinSize(action, 86, 0),
 		moreButton,
 	)
-	row := container.NewBorder(nil, nil, identity, right, linuxGap(1))
-	return uikit.Pad(row, 3, 3, 6, 6)
+	return uikit.ServiceRow(identity, right)
 }
-
 
 const maxProjectLogPreviewBytes int64 = 1024 * 1024
 
@@ -824,12 +798,8 @@ func makeToolCard(w fyne.Window, tool toolDefinition) fyne.CanvasObject {
 			linuxRequestToolVersion(tool.Name, binary, append([]string(nil), tool.Arguments...), statusLabel)
 		}
 	}
-	title := widget.NewLabelWithStyle(tool.Name, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
-	identity := container.NewHBox(
-		linuxImage(linuxToolResource(tool.Name), 20, tool.Name),
-		linuxHGap(8),
-		container.NewVBox(title, statusLabel),
-	)
+	title := uikit.BoldText(tool.Name, 12.5)
+	identity := uikit.ServiceIdentity(linuxImage(linuxToolResource(tool.Name), 20, tool.Name), title, statusLabel, nil)
 	var action fyne.CanvasObject = linuxGap(1)
 	if binary == "" {
 		installButton := widget.NewButtonWithIcon("Install guide", theme.DownloadIcon(), func() {
@@ -838,7 +808,19 @@ func makeToolCard(w fyne.Window, tool toolDefinition) fyne.CanvasObject {
 		installButton.Importance = widget.LowImportance
 		action = linuxMinSize(installButton, 86, 0)
 	}
-	return uikit.Pad(container.NewBorder(nil, nil, identity, action, linuxGap(1)), 3, 3, 6, 6)
+	statusText := "Not installed"
+	statusColor := theme.Color(linuxColorMuted)
+	if binary != "" {
+		statusText = "Installed"
+		statusColor = theme.Color(theme.ColorNamePrimary)
+	}
+	controls := container.NewHBox(
+		linuxMinSize(linuxStatusBadge(statusText, statusColor), 120, 0),
+		linuxHSpace(78),
+		linuxMinSize(action, 86, 0),
+		linuxHSpace(32),
+	)
+	return uikit.ServiceRow(identity, controls)
 }
 
 func runCommandWithTimeout(timeout time.Duration, command string, args ...string) ([]byte, error) {
