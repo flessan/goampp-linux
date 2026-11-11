@@ -113,3 +113,33 @@ func TestAppearanceControlUpdatesPreference(t *testing.T) {
 		t.Fatal("appearance change was not applied and persisted")
 	}
 }
+
+func TestProjectCreatorPreparationFailure(t *testing.T) {
+	want := errors.New("bad name")
+	var got error
+	c := &ProjectCreator{
+		Prepare: func(r ProjectRequest) (ProjectRequest, error) { return r, want },
+		Invalid: func(err error) { got = err },
+	}
+	c.Submit(ProjectRequest{Name: "bad", Framework: "Go"})
+	if got != want || c.Busy {
+		t.Fatal("invalid request started an operation")
+	}
+}
+
+func TestStartupCheckSuccessfulChange(t *testing.T) {
+	test.NewTempApp(t)
+	calls := 0
+	check := StartupCheck("Service", false, true, func(value bool, done func(error)) {
+		calls++
+		done(nil)
+	}, func(value bool, err error) {
+		if !value || err != nil {
+			t.Fatal("wrong completion")
+		}
+	})
+	check.SetChecked(true)
+	if !check.Checked || check.Disabled() || calls != 1 {
+		t.Fatal("successful change did not retain state")
+	}
+}
