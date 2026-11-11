@@ -56,3 +56,7 @@ Thumbs.db
 
 # Optional local GUI regression captures
 /snapshots/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
